@@ -1,6 +1,6 @@
-# Badu Perrone — Gerador de Contratos
+# Badu Perrone — Sistema individual de contrato personalizado
 
-Geração de contratos de apresentação pro artista Badu Perrone. Cliente preenche o formulário, revisa e assina na tela; o Badu confirma duração/pagamento e assina também; PDF final sai pros dois lados.
+Geração de contratos de shows e eventos para o artista Badu Perrone. Cliente preenche o formulário, revisa e assina na tela; o contratado confirma duração/pagamento e assina também; PDF final sai pros dois lados.
 
 ## Sobre o projeto
 
