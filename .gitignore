@@ -1,0 +1,24 @@
+# Dependências e artefatos de build
+node_modules/
+
+# Segredos e configuração local — nunca commitar
+.env
+.env.local
+*.env
+
+# Banco de dados local (dados reais de clientes não vão para o repositório)
+backend/data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

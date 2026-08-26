@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Badu Perrone — Contratos</title>
+<!-- Vazio = mesma origem. Preencha com a URL da API se front e back forem hospedados separados (ver DEPLOY.md). -->
+<meta name="api-base" content="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="stage-glow"></div>
+<div id="app">
+
+  <!-- ================= LANDING ================= -->
+  <section class="screen active" id="screen-landing">
+    <div class="topbar">
+      <div class="wordmark">
+        <span class="dot"></span>
+        <div>BADU PERRONE<small>Produções &amp; Shows</small></div>
+      </div>
+      <div class="top-actions">
+        <button class="link-ghost" id="btn-open-admin" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v6M12 17v6M4.2 4.2l4.2 4.2M15.5 15.5l4.2 4.2M1 12h6M17 12h6M4.2 19.8l4.2-4.2M15.5 8.5l4.2-4.2"/></svg>
+          Painel Badu
+        </button>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Contrato de apresentação · digital</div>
+        <h1>GERAR<br><em>CONTRATO</em></h1>
+        <p class="hero-sub">Preencha seus dados, revise as cláusulas do show e assine na tela. <b>Assim que o Badu confirmar a assinatura</b>, o contrato final em PDF fica disponível para os dois lados.</p>
+        <div class="hero-ctas">
+          <button class="ticket-btn" id="btn-start" type="button">
+            <span class="ticket-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F0D0C" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </span>
+            <span class="divider"></span>
+            Gerar contrato
+          </button>
+        </div>
+
+        <div class="lookup-box">
+          <label class="link-ghost" style="padding:0;color:var(--ink-faint);font-family:var(--font-mono);font-size:12px;text-transform:uppercase;letter-spacing:0.08em;">Já assinou? Consulte o status</label>
+          <div class="lookup-row">
+            <input type="text" id="input-lookup-code" placeholder="Código do contrato · ex. BP-20260918-4F2K" style="flex:1;background:var(--bg-raised-2);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:var(--radius-s);font-family:var(--font-mono);font-size:13px;">
+            <button class="btn btn-ghost btn-sm" id="btn-lookup" type="button">Consultar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-art" id="hero-carousel">
+        <div class="carousel-track" id="carousel-track"></div>
+        <div class="hero-art-scrim"></div>
+        <div class="tag">Badu Perrone · ao vivo</div>
+        <button class="car-arrow car-prev" type="button" aria-label="Foto anterior">&#8249;</button>
+        <button class="car-arrow car-next" type="button" aria-label="Próxima foto">&#8250;</button>
+        <div class="car-dots" id="car-dots"></div>
+      </div>
+    </div>
+
+    <footer class="foot" id="landing-footer">Badu Produções · Itatiba – SP</footer>
+  </section>
+
+  <!-- ================= FORM STEPS ================= -->
+  <section class="screen" id="screen-form">
+    <div class="topbar">
+      <div class="wordmark"><span class="dot"></span><div>BADU PERRONE<small>Contrato de apresentação</small></div></div>
+      <div class="top-actions">
+        <button class="link-ghost" id="btn-form-cancel" type="button">Cancelar</button>
+      </div>
+    </div>
+    <div class="app-shell">
+      <div class="stepbar" id="stepbar">
+        <div class="step" data-step="1">Contratante</div>
+        <div class="step" data-step="2">Endereço</div>
+        <div class="step" data-step="3">Evento</div>
+        <div class="step" data-step="4">Contrato</div>
+        <div class="step" data-step="5">Assinatura</div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="panel form-step" data-step="1">
+        <h2>Quem é o contratante</h2>
+        <p class="panel-sub">Dados de quem está contratando a apresentação.</p>
+        <div class="field">
+          <label>Nome completo ou razão social</label>
+          <input type="text" id="f-nome" placeholder="Ex.: Aline Cristina da Silva Barata Diniz">
+          <div class="errmsg">Informe o nome ou razão social.</div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Nacionalidade</label>
+            <input type="text" id="f-nacionalidade" placeholder="Ex.: Brasileira" value="Brasileira">
+            <div class="errmsg">Informe a nacionalidade.</div>
+          </div>
+          <div class="field">
+            <label>Profissão</label>
+            <input type="text" id="f-profissao" placeholder="Ex.: Economista">
+            <div class="errmsg">Informe a profissão.</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>RG</label>
+            <input type="text" id="f-rg" placeholder="00.000.000-0" maxlength="12" inputmode="numeric">
+            <div class="errmsg">Informe o RG.</div>
+          </div>
+          <div class="field">
+            <label>CPF ou CNPJ</label>
+            <input type="text" id="f-cpfcnpj" placeholder="000.000.000-00" maxlength="18" inputmode="numeric">
+            <div class="errmsg">Informe um CPF ou CNPJ válido.</div>
+          </div>
+        </div>
+        <div class="form-nav">
+          <span></span>
+          <button class="btn btn-primary" data-next type="button">Continuar</button>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="panel form-step" data-step="2" style="display:none;">
+        <h2>Endereço do contratante</h2>
+        <p class="panel-sub">Endereço que constará no contrato.</p>
+        <div class="field-row thirds">
+          <div class="field">
+            <label>Rua</label>
+            <input type="text" id="f-endRua" placeholder="Ex.: Avenida PE Antonio José dos Santos">
+            <div class="errmsg">Informe a rua.</div>
+          </div>
+          <div class="field">
+            <label>Número</label>
+            <input type="text" id="f-endNumero" placeholder="Ex.: 530 Apto 173E">
+            <div class="errmsg">Informe o número.</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Bairro</label>
+            <input type="text" id="f-endBairro" placeholder="Ex.: Brooklin">
+            <div class="errmsg">Informe o bairro.</div>
+          </div>
+          <div class="field">
+            <label>Cidade</label>
+            <input type="text" id="f-endCidade" placeholder="Ex.: São Paulo - SP">
+            <div class="errmsg">Informe a cidade.</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>CEP</label>
+            <input type="text" id="f-endCep" placeholder="00000-000">
+            <div class="errmsg">Informe o CEP.</div>
+          </div>
+          <div></div>
+        </div>
+        <div class="form-nav">
+          <button class="btn btn-ghost" data-prev type="button">Voltar</button>
+          <button class="btn btn-primary" data-next type="button">Continuar</button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="panel form-step" data-step="3" style="display:none;">
+        <h2>Local e data do show</h2>
+        <p class="panel-sub">Onde e quando a apresentação vai acontecer.</p>
+        <div class="field-row thirds">
+          <div class="field">
+            <label>Rua do local</label>
+            <input type="text" id="f-localRua" placeholder="Ex.: Estrada do Rancho Mombuca">
+            <div class="errmsg">Informe a rua do local.</div>
+          </div>
+          <div class="field">
+            <label>Número</label>
+            <input type="text" id="f-localNumero" placeholder="Ex.: s/n">
+            <div class="errmsg">Informe o número.</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Bairro</label>
+            <input type="text" id="f-localBairro" placeholder="Ex.: Zona Rural">
+            <div class="errmsg">Informe o bairro.</div>
+          </div>
+          <div class="field">
+            <label>Cidade</label>
+            <input type="text" id="f-localCidade" placeholder="Ex.: Itatiba - SP">
+            <div class="errmsg">Informe a cidade.</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>CEP do local</label>
+            <input type="text" id="f-localCep" placeholder="00000-000">
+            <div class="errmsg">Informe o CEP do local.</div>
+          </div>
+          <div></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Data do show</label>
+            <input type="date" id="f-data">
+            <div class="errmsg">Informe a data.</div>
+          </div>
+          <div class="field">
+            <label>Horário de início</label>
+            <input type="time" id="f-hora" value="20:00">
+            <div class="errmsg">Informe o horário.</div>
+          </div>
+        </div>
+        <div class="form-nav">
+          <button class="btn btn-ghost" data-prev type="button">Voltar</button>
+          <button class="btn btn-primary" data-next type="button">Revisar contrato</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: REVIEW -->
+      <div class="panel form-step" data-step="4" style="display:none;">
+        <h2>Revise o contrato</h2>
+        <p class="panel-sub">Confira se os dados estão corretos. As cláusulas gerais são fixas e não podem ser alteradas por aqui.</p>
+        <div class="paper" id="contract-preview"></div>
+        <div class="form-nav">
+          <button class="btn btn-ghost" data-prev type="button">Voltar e corrigir</button>
+          <button class="btn btn-primary" data-next type="button">Assinar contrato</button>
+        </div>
+      </div>
+
+      <!-- STEP 5: SIGN -->
+      <div class="panel form-step" data-step="5" style="display:none;">
+        <h2>Sua assinatura</h2>
+        <p class="panel-sub">Desenhe sua assinatura no campo abaixo com o dedo ou o mouse.</p>
+        <div class="sign-block">
+          <div class="sign-canvas-wrap">
+            <canvas id="sign-canvas-client"></canvas>
+            <div class="sign-baseline"></div>
+            <div class="sign-placeholder" id="sign-placeholder-client">assine aqui</div>
+          </div>
+          <div class="sign-tools">
+            <span class="hint">CONTRATANTE — assinatura eletrônica</span>
+            <button class="btn btn-ghost btn-sm" id="btn-clear-sign-client" type="button">Limpar</button>
+          </div>
+        </div>
+        <div class="agree-row">
+          <input type="checkbox" id="chk-agree">
+          <label for="chk-agree">Li e concordo com todas as cláusulas do contrato acima. Estou ciente de que esta assinatura eletrônica vale como aceite dos termos.</label>
+        </div>
+        <div class="form-nav">
+          <button class="btn btn-ghost" data-prev type="button">Voltar</button>
+          <button class="btn btn-primary" id="btn-submit-client" type="button" disabled>Assinar e enviar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CONFIRMATION / VOUCHER ================= -->
+  <section class="screen" id="screen-confirm">
+    <div class="topbar">
+      <div class="wordmark"><span class="dot"></span><div>BADU PERRONE<small>Contrato de apresentação</small></div></div>
+      <div class="top-actions"><button class="link-ghost" id="btn-confirm-home" type="button">Início</button></div>
+    </div>
+    <div class="voucher" id="voucher-box"></div>
+  </section>
+
+  <!-- ================= LOOKUP ================= -->
+  <section class="screen" id="screen-lookup">
+    <div class="topbar">
+      <div class="wordmark"><span class="dot"></span><div>BADU PERRONE<small>Consultar contrato</small></div></div>
+      <div class="top-actions"><button class="link-ghost" id="btn-lookup-home" type="button">Início</button></div>
+    </div>
+    <div class="app-shell">
+      <div class="lookup-panel" id="lookup-result"></div>
+    </div>
+  </section>
+
+  <!-- ================= ADMIN GATE ================= -->
+  <section class="screen" id="screen-admin-gate">
+    <div class="topbar">
+      <div class="wordmark"><span class="dot"></span><div>BADU PERRONE<small>Painel restrito</small></div></div>
+      <div class="top-actions"><button class="link-ghost" id="btn-admin-gate-home" type="button">Início</button></div>
+    </div>
+    <div class="admin-gate">
+      <div class="lock-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      </div>
+      <h2 style="font-size:22px;margin-bottom:8px;">Acesso do Badu</h2>
+      <p style="color:var(--ink-dim);font-size:14px;margin-bottom:22px;">Entre com seu e-mail e senha para ver os contratos.</p>
+      <div class="field">
+        <input type="email" id="input-admin-email" placeholder="E-mail" autocomplete="username">
+      </div>
+      <div class="field">
+        <input type="password" id="input-admin-senha" placeholder="Senha" autocomplete="current-password">
+        <div class="errmsg" id="admin-pin-err" style="display:none;text-align:center;">E-mail ou senha inválidos.</div>
+      </div>
+      <button class="btn btn-primary" id="btn-admin-enter" type="button" style="width:100%;justify-content:center;">Entrar</button>
+    </div>
+  </section>
+
+  <!-- ================= ADMIN DASHBOARD ================= -->
+  <section class="screen" id="screen-admin">
+    <div class="topbar">
+      <div class="wordmark"><span class="dot"></span><div>BADU PERRONE<small>Painel de contratos</small></div></div>
+      <div class="top-actions"><button class="link-ghost" id="btn-admin-home" type="button">Sair</button></div>
+    </div>
+    <div class="app-shell wide">
+      <div class="admin-stats" id="admin-stats"></div>
+      <div id="admin-list"></div>
+    </div>
+  </section>
+
+  <!-- ================= ADMIN SIGN ================= -->
+  <section class="screen" id="screen-admin-sign">
+    <div class="topbar">
+      <div class="wordmark"><span class="dot"></span><div>BADU PERRONE<small>Assinar contrato</small></div></div>
+      <div class="top-actions">
+        <button class="link-ghost" id="btn-admin-delete" type="button" style="color:var(--red);">Excluir contrato</button>
+        <button class="link-ghost" id="btn-admin-sign-back" type="button">Voltar ao painel</button>
+      </div>
+    </div>
+    <div class="app-shell">
+      <div class="panel">
+        <h2 id="admin-sign-title" style="font-size:26px;">Contrato</h2>
+        <p class="panel-sub" id="admin-sign-sub"></p>
+
+        <div class="badu-terms" id="badu-terms-block">
+          <h3 class="terms-heading">Duração do show — só você define</h3>
+          <div class="field-row">
+            <div class="field">
+              <label>Horário de término</label>
+              <input type="time" id="admin-f-horafim">
+            </div>
+            <div class="field">
+              <div class="check-field">
+                <input type="checkbox" id="admin-f-intervalo" checked>
+                <label for="admin-f-intervalo">Show terá intervalo</label>
+              </div>
+            </div>
+          </div>
+          <div class="field" id="admin-f-intervalomin-wrap">
+            <label>Duração do intervalo (minutos)</label>
+            <input type="number" id="admin-f-intervalomin" min="0" step="5" value="30">
+          </div>
+
+          <h3 class="terms-heading">Pagamento — só você define</h3>
+          <div class="field-row">
+            <div class="field">
+              <label>Valor de entrada (R$)</label>
+              <input type="number" id="admin-f-entrada" min="0" step="0.01" placeholder="0,00" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label>Restante, a pagar até a semana do show (R$)</label>
+              <input type="number" id="admin-f-restante" min="0" step="0.01" placeholder="0,00" inputmode="decimal">
+            </div>
+          </div>
+          <div class="total-display" id="admin-total-display"></div>
+        </div>
+
+        <div class="paper" id="admin-contract-preview"></div>
+
+        <div id="admin-sign-area">
+          <div class="sign-block">
+            <div class="sign-canvas-wrap">
+              <canvas id="sign-canvas-badu"></canvas>
+              <div class="sign-baseline"></div>
+              <div class="sign-placeholder" id="sign-placeholder-badu">assine aqui</div>
+            </div>
+            <div class="sign-tools">
+              <span class="hint">CONTRATADO — Badu Produções</span>
+              <button class="btn btn-ghost btn-sm" id="btn-clear-sign-badu" type="button">Limpar</button>
+            </div>
+          </div>
+          <div class="form-nav">
+            <span></span>
+            <button class="btn btn-primary" id="btn-submit-badu" type="button">Assinar e finalizar contrato</button>
+          </div>
+        </div>
+
+        <div id="admin-already-signed" style="display:none;margin-top:26px;">
+          <div class="voucher-actions">
+            <button class="btn btn-teal" id="btn-admin-download" type="button">Baixar PDF final</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-card">
+    <h3 id="confirm-modal-title">Confirmar exclusão</h3>
+    <p id="confirm-modal-msg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="confirm-modal-cancel" type="button">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="confirm-modal-ok" type="button">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

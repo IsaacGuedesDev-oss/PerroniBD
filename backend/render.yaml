@@ -1,0 +1,56 @@
+# Blueprint do Render pra subir a instância demo. Veja DEPLOY.md para o passo a passo.
+# Sem DB_PATH: no plano free o disco já é efêmero, e com DEMO_MODE=true o banco roda em
+# memória mesmo (src/db.js), semeado de novo a cada boot (src/seed.js).
+services:
+  - type: web
+    name: badu-contratos-demo
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_COOKIE_NAME
+        value: badu_session
+      # Segredos e dados do CONTRATADO — não têm valor aqui de propósito.
+      # O Render pede pra você preencher cada um no painel antes do primeiro deploy.
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: BUSINESS_NOME_ARTISTA
+        sync: false
+      - key: BUSINESS_NOME_EMPRESA
+        sync: false
+      - key: BUSINESS_CNPJ
+        sync: false
+      - key: BUSINESS_REPRESENTANTE
+        sync: false
+      - key: BUSINESS_END_RUA
+        sync: false
+      - key: BUSINESS_END_NUMERO
+        sync: false
+      - key: BUSINESS_END_BAIRRO
+        sync: false
+      - key: BUSINESS_END_CEP
+        sync: false
+      - key: BUSINESS_CIDADE_UF
+        sync: false
+      - key: BUSINESS_PIX
+        sync: false
+      - key: BUSINESS_BANCO_CONTA
+        sync: false
+      - key: BUSINESS_BANCO_AGENCIA
+        sync: false
+      - key: BUSINESS_BANCO_NOME
+        sync: false
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_ADMIN_EMAIL
+        value: admin@demo.com
+      - key: DEMO_ADMIN_SENHA
+        sync: false
