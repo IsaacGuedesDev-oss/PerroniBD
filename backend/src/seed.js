@@ -6,15 +6,15 @@ const { makeFakeSignaturePNG } = require('./signature');
 const DEMO_ADMIN_EMAIL = (process.env.DEMO_ADMIN_EMAIL || 'admin@demo.com').trim().toLowerCase();
 const DEMO_ADMIN_SENHA = process.env.DEMO_ADMIN_SENHA || 'demo12345';
 
-function seedDemoData(db) {
-  seedDemoAdmin(db);
-  seedDemoContrato(db, {
+async function seedDemoData(pool) {
+  await seedDemoAdmin(pool);
+  await seedDemoContrato(pool, {
     id: 'BP-DEMO-0001',
     status: 'aguardando_badu',
     nome: 'Cliente Demonstração',
     diasNoFuturo: 21
   });
-  seedDemoContrato(db, {
+  await seedDemoContrato(pool, {
     id: 'BP-DEMO-0002',
     status: 'finalizado',
     nome: 'Contrato Exemplo Finalizado',
@@ -24,18 +24,19 @@ function seedDemoData(db) {
   });
 }
 
-function seedDemoAdmin(db) {
-  var existing = db.prepare('SELECT id FROM admins WHERE email = ?').get(DEMO_ADMIN_EMAIL);
-  if (existing) return;
+async function seedDemoAdmin(pool) {
+  var { rows } = await pool.query('SELECT id FROM admins WHERE email = $1', [DEMO_ADMIN_EMAIL]);
+  if (rows[0]) return;
   var hash = bcrypt.hashSync(DEMO_ADMIN_SENHA, 10);
-  db.prepare(
-    'INSERT INTO admins (email, password_hash, created_at) VALUES (?, ?, ?)'
-  ).run(DEMO_ADMIN_EMAIL, hash, new Date().toISOString());
+  await pool.query(
+    'INSERT INTO admins (email, password_hash, created_at) VALUES ($1, $2, $3)',
+    [DEMO_ADMIN_EMAIL, hash, new Date().toISOString()]
+  );
 }
 
-function seedDemoContrato(db, opts) {
-  var existing = db.prepare('SELECT id FROM contratos WHERE id = ?').get(opts.id);
-  if (existing) return;
+async function seedDemoContrato(pool, opts) {
+  var { rows } = await pool.query('SELECT id FROM contratos WHERE id = $1', [opts.id]);
+  if (rows[0]) return;
 
   var createdAt = new Date().toISOString();
   var eventoData = new Date(Date.now() + opts.diasNoFuturo * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -63,7 +64,7 @@ function seedDemoContrato(db, opts) {
     evento_data: eventoData,
     evento_hora: '20:00',
     duracao_hora_fim: opts.duracaoFinal ? opts.duracaoFinal.horaFim : null,
-    duracao_tem_intervalo: opts.duracaoFinal ? (opts.duracaoFinal.temIntervalo ? 1 : 0) : null,
+    duracao_tem_intervalo: opts.duracaoFinal ? !!opts.duracaoFinal.temIntervalo : null,
     duracao_intervalo_min: opts.duracaoFinal ? opts.duracaoFinal.intervaloMin : null,
     pagamento_valor_entrada: opts.pagamento ? opts.pagamento.valorEntrada : null,
     pagamento_valor_restante: opts.pagamento ? opts.pagamento.valorRestante : null,
@@ -74,9 +75,9 @@ function seedDemoContrato(db, opts) {
   };
 
   var cols = Object.keys(row);
-  var placeholders = cols.map(function () { return '?'; }).join(', ');
+  var placeholders = cols.map(function (_, i) { return '$' + (i + 1); }).join(', ');
   var sql = 'INSERT INTO contratos (' + cols.join(', ') + ') VALUES (' + placeholders + ')';
-  db.prepare(sql).run(...cols.map(function (c) { return row[c]; }));
+  await pool.query(sql, cols.map(function (c) { return row[c]; }));
 }
 
 module.exports = { seedDemoData, DEMO_ADMIN_EMAIL, DEMO_ADMIN_SENHA };

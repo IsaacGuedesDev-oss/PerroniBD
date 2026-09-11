@@ -82,9 +82,9 @@ DEMO_MODE=true npm start
 - CPF/CNPJ/RG criptografados em repouso
 - Modo demo pronto pra deploy público
 
-## Próximo passo
+## Branches
 
-SQLite hoje; migrar pra Postgres depois só troca `backend/src/db.js` — resto (rotas, mapper, criptografia) não muda. Detalhes em `backend/README.md`.
+`main` é a demo do portfólio, com SQLite. `producao` migrou pra Postgres — necessário pra rodar com dados reais de cliente sem risco de perda no disco efêmero de planos gratuitos. Ver `PRODUCAO.md` na branch `producao`.
 
 ## Licença
 

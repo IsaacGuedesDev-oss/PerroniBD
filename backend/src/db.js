@@ -1,25 +1,18 @@
-const path = require('path');
-const fs = require('fs');
-const { DatabaseSync } = require('node:sqlite'); // built-in desde o Node 22.5 — sem compilação nativa
+const { Pool } = require('pg');
 const { isDemoMode } = require('./demo');
 
-// No modo demo o banco é sempre em memória (ignora DB_PATH de propósito) — reseta a
-// cada restart e é re-semeado logo abaixo. Fora do demo, arquivo SQLite normal.
-const usingMemoryDb = isDemoMode();
-const DB_PATH = usingMemoryDb
-  ? ':memory:'
-  : (process.env.DB_PATH
-    ? path.resolve(__dirname, '..', process.env.DB_PATH)
-    : path.join(__dirname, '..', 'data', 'badu.sqlite'));
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // A maioria dos Postgres gerenciados grátis (Neon, Supabase) exige SSL mas usa
+  // certificado que o Node não valida por padrão — comum relaxar isso pro client.
+  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=disable')
+    ? false
+    : { rejectUnauthorized: false }
+});
 
-if (!usingMemoryDb) fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-
-const db = new DatabaseSync(DB_PATH, { enableForeignKeyConstraints: true });
-if (!usingMemoryDb) db.exec('PRAGMA journal_mode = WAL;');
-
-db.exec(`
+const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS admins (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL
@@ -58,11 +51,11 @@ db.exec(`
     evento_hora TEXT,
 
     duracao_hora_fim TEXT,
-    duracao_tem_intervalo INTEGER,
+    duracao_tem_intervalo BOOLEAN,
     duracao_intervalo_min INTEGER,
 
-    pagamento_valor_entrada REAL,
-    pagamento_valor_restante REAL,
+    pagamento_valor_entrada DOUBLE PRECISION,
+    pagamento_valor_restante DOUBLE PRECISION,
 
     assinatura_cliente TEXT,
     assinatura_cliente_em TEXT,
@@ -72,10 +65,26 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_sessions_admin ON sessions(admin_id);
   CREATE INDEX IF NOT EXISTS idx_contratos_created ON contratos(created_at);
-`);
+`;
 
-if (isDemoMode()) {
-  require('./seed').seedDemoData(db);
+// Datas/horas ficam como TEXT (não TIMESTAMPTZ) de propósito: o resto do código já
+// trabalha com strings ISO geradas em JS, e TIMESTAMPTZ viraria objeto Date no driver
+// pg — mudança de tipo que quebraria código que hoje trata isso como string.
+
+let ready = null;
+
+// Roda a criação do schema (idempotente) e, em modo demo, zera e re-semeia os dados
+// fictícios a cada boot — chamado uma vez em server.js antes de subir o servidor.
+function init() {
+  if (!ready) {
+    ready = pool.query(SCHEMA_SQL).then(async () => {
+      if (isDemoMode()) {
+        await pool.query('TRUNCATE TABLE sessions, contratos, admins RESTART IDENTITY CASCADE');
+        await require('./seed').seedDemoData(pool);
+      }
+    });
+  }
+  return ready;
 }
 
-module.exports = db;
+module.exports = { pool, init };

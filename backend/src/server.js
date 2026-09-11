@@ -4,12 +4,13 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 
+const { init } = require('./db');
 const authRoutes = require('./routes/auth');
 const contratosRoutes = require('./routes/contratos');
 const configRoutes = require('./routes/config');
 
 // Falha rápido se faltar alguma env var obrigatória.
-['ENCRYPTION_KEY', 'SESSION_SECRET'].forEach(function (name) {
+['ENCRYPTION_KEY', 'SESSION_SECRET', 'DATABASE_URL'].forEach(function (name) {
   if (!process.env[name]) {
     console.error(
       'Variável de ambiente ' + name + ' não definida. Copie backend/.env.example para backend/.env ' +
@@ -65,6 +66,11 @@ app.use(function (err, req, res, next) { // eslint-disable-line no-unused-vars
   res.status(500).json({ error: 'Erro interno do servidor.' });
 });
 
-app.listen(PORT, function () {
-  console.log('Servidor do Badu Contratos rodando em http://localhost:' + PORT);
+init().then(function () {
+  app.listen(PORT, function () {
+    console.log('Servidor do Badu Contratos rodando em http://localhost:' + PORT);
+  });
+}).catch(function (err) {
+  console.error('Falha ao inicializar o banco de dados:', err);
+  process.exit(1);
 });

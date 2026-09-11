@@ -1,6 +1,6 @@
 # Blueprint do Render pra subir a instância demo. Veja DEPLOY.md para o passo a passo.
-# Sem DB_PATH: no plano free o disco já é efêmero, e com DEMO_MODE=true o banco roda em
-# memória mesmo (src/db.js), semeado de novo a cada boot (src/seed.js).
+# Precisa de um Postgres (Neon/Supabase, free) em DATABASE_URL — com DEMO_MODE=true as
+# tabelas são zeradas (TRUNCATE) e re-semeadas a cada boot (src/db.js, src/seed.js).
 services:
   - type: web
     name: badu-contratos-demo
@@ -16,6 +16,8 @@ services:
         value: badu_session
       # Segredos e dados do CONTRATADO — não têm valor aqui de propósito.
       # O Render pede pra você preencher cada um no painel antes do primeiro deploy.
+      - key: DATABASE_URL
+        sync: false
       - key: ENCRYPTION_KEY
         sync: false
       - key: SESSION_SECRET

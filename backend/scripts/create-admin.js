@@ -6,7 +6,7 @@
 //   npm run create-admin -- email@exemplo.com "senha-forte"
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const db = require('../src/db');
+const { pool, init } = require('../src/db');
 
 const [, , emailArg, senhaArg] = process.argv;
 
@@ -23,15 +23,23 @@ if (senha.length < 8) {
   process.exit(1);
 }
 
-const hash = bcrypt.hashSync(senha, 12);
-const existing = db.prepare('SELECT id FROM admins WHERE email = ?').get(email);
+(async () => {
+  await init();
+  const hash = bcrypt.hashSync(senha, 12);
+  const { rows } = await pool.query('SELECT id FROM admins WHERE email = $1', [email]);
 
-if (existing) {
-  db.prepare('UPDATE admins SET password_hash = ? WHERE id = ?').run(hash, existing.id);
-  console.log('Senha atualizada para ' + email);
-} else {
-  db.prepare(
-    'INSERT INTO admins (email, password_hash, created_at) VALUES (?, ?, ?)'
-  ).run(email, hash, new Date().toISOString());
-  console.log('Usuário criado: ' + email);
-}
+  if (rows[0]) {
+    await pool.query('UPDATE admins SET password_hash = $1 WHERE id = $2', [hash, rows[0].id]);
+    console.log('Senha atualizada para ' + email);
+  } else {
+    await pool.query(
+      'INSERT INTO admins (email, password_hash, created_at) VALUES ($1, $2, $3)',
+      [email, hash, new Date().toISOString()]
+    );
+    console.log('Usuário criado: ' + email);
+  }
+  await pool.end();
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

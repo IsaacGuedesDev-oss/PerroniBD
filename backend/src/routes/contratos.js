@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const db = require('../db');
+const { pool } = require('../db');
 const { genId } = require('../idgen');
 const { rowToFullContract, rowToPublicSummary, createBodyToRow } = require('../mapper');
 const { buildContractPDF } = require('../pdf');
@@ -20,111 +20,126 @@ const createLimiter = rateLimit({
   message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }
 });
 
-function getContractRow(id) {
-  return db.prepare('SELECT * FROM contratos WHERE id = ?').get(id);
+async function getContractRow(id) {
+  const { rows } = await pool.query('SELECT * FROM contratos WHERE id = $1', [id]);
+  return rows[0];
 }
 
 // POST /api/contratos — público: o cliente cria e assina o contrato.
-router.post('/', createLimiter, (req, res) => {
-  var body = req.body || {};
-  var cliente = body.cliente || {};
-  var evento = body.evento || {};
+router.post('/', createLimiter, async (req, res, next) => {
+  try {
+    var body = req.body || {};
+    var cliente = body.cliente || {};
+    var evento = body.evento || {};
 
-  var missing = [];
-  REQUIRED_CLIENTE_FIELDS.forEach(function (f) { if (!String(cliente[f] || '').trim()) missing.push('cliente.' + f); });
-  REQUIRED_EVENTO_FIELDS.forEach(function (f) { if (!String(evento[f] || '').trim()) missing.push('evento.' + f); });
-  if (!body.assinaturaCliente) missing.push('assinaturaCliente');
+    var missing = [];
+    REQUIRED_CLIENTE_FIELDS.forEach(function (f) { if (!String(cliente[f] || '').trim()) missing.push('cliente.' + f); });
+    REQUIRED_EVENTO_FIELDS.forEach(function (f) { if (!String(evento[f] || '').trim()) missing.push('evento.' + f); });
+    if (!body.assinaturaCliente) missing.push('assinaturaCliente');
 
-  if (missing.length) {
-    return res.status(400).json({ error: 'Campos obrigatórios ausentes.', campos: missing });
-  }
+    if (missing.length) {
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes.', campos: missing });
+    }
 
-  var id = genId();
-  var createdAt = new Date().toISOString();
-  var row = createBodyToRow(id, createdAt, body);
-  row.assinatura_cliente_em = body.assinaturaClienteEm || createdAt;
+    var id = await genId();
+    var createdAt = new Date().toISOString();
+    var row = createBodyToRow(id, createdAt, body);
+    row.assinatura_cliente_em = body.assinaturaClienteEm || createdAt;
 
-  var cols = Object.keys(row);
-  var placeholders = cols.map(function () { return '?'; }).join(', ');
-  var sql = 'INSERT INTO contratos (' + cols.join(', ') + ') VALUES (' + placeholders + ')';
-  var vals = cols.map(function (c) { return row[c]; });
-  db.prepare(sql).run(...vals);
+    var cols = Object.keys(row);
+    var placeholders = cols.map(function (_, i) { return '$' + (i + 1); }).join(', ');
+    var sql = 'INSERT INTO contratos (' + cols.join(', ') + ') VALUES (' + placeholders + ')';
+    var vals = cols.map(function (c) { return row[c]; });
+    await pool.query(sql, vals);
 
-  var saved = getContractRow(id);
-  res.status(201).json(rowToFullContract(saved));
+    var saved = await getContractRow(id);
+    res.status(201).json(rowToFullContract(saved));
+  } catch (e) { next(e); }
 });
 
 // GET /api/contratos/:id — resumo público sem sessão; registro completo com sessão do Badu.
-router.get('/:id', attachOptionalAuth, (req, res) => {
-  var row = getContractRow(req.params.id.toUpperCase());
-  if (!row) return res.status(404).json({ error: 'Contrato não encontrado.' });
-  if (req.admin) return res.json(rowToFullContract(row));
-  res.json(rowToPublicSummary(row));
+router.get('/:id', attachOptionalAuth, async (req, res, next) => {
+  try {
+    var row = await getContractRow(req.params.id.toUpperCase());
+    if (!row) return res.status(404).json({ error: 'Contrato não encontrado.' });
+    if (req.admin) return res.json(rowToFullContract(row));
+    res.json(rowToPublicSummary(row));
+  } catch (e) { next(e); }
 });
 
 // GET /api/contratos — autenticado (Badu): lista completa para o painel.
-router.get('/', requireAuth, (req, res) => {
-  var rows = db.prepare('SELECT * FROM contratos ORDER BY created_at DESC').all();
-  res.json(rows.map(rowToFullContract));
+router.get('/', requireAuth, async (req, res, next) => {
+  try {
+    var { rows } = await pool.query('SELECT * FROM contratos ORDER BY created_at DESC');
+    res.json(rows.map(rowToFullContract));
+  } catch (e) { next(e); }
 });
 
 // PATCH /api/contratos/:id — autenticado (Badu): edita duração/pagamento e assina.
-router.patch('/:id', requireAuth, (req, res) => {
-  var row = getContractRow(req.params.id.toUpperCase());
-  if (!row) return res.status(404).json({ error: 'Contrato não encontrado.' });
+router.patch('/:id', requireAuth, async (req, res, next) => {
+  try {
+    var row = await getContractRow(req.params.id.toUpperCase());
+    if (!row) return res.status(404).json({ error: 'Contrato não encontrado.' });
 
-  var body = req.body || {};
-  var sets = [];
-  var vals = [];
+    var body = req.body || {};
+    var sets = [];
+    var vals = [];
+    var n = 1;
+    function addSet(col, val) { sets.push(col + ' = $' + n); vals.push(val); n++; }
 
-  if (body.duracaoFinal) {
-    var d = body.duracaoFinal;
-    sets.push('duracao_hora_fim = ?'); vals.push(d.horaFim || null);
-    sets.push('duracao_tem_intervalo = ?'); vals.push(d.temIntervalo ? 1 : 0);
-    sets.push('duracao_intervalo_min = ?'); vals.push(d.temIntervalo && d.intervaloMin != null ? Number(d.intervaloMin) : null);
-  }
-  if (body.pagamento) {
-    var p = body.pagamento;
-    sets.push('pagamento_valor_entrada = ?'); vals.push(p.valorEntrada != null ? Number(p.valorEntrada) : null);
-    sets.push('pagamento_valor_restante = ?'); vals.push(p.valorRestante != null ? Number(p.valorRestante) : null);
-  }
-  if (body.assinaturaBadu) {
-    sets.push('assinatura_badu = ?'); vals.push(body.assinaturaBadu);
-    sets.push('assinatura_badu_em = ?'); vals.push(body.assinaturaBaduEm || new Date().toISOString());
-    sets.push('status = ?'); vals.push('finalizado');
-  }
+    if (body.duracaoFinal) {
+      var d = body.duracaoFinal;
+      addSet('duracao_hora_fim', d.horaFim || null);
+      addSet('duracao_tem_intervalo', !!d.temIntervalo);
+      addSet('duracao_intervalo_min', d.temIntervalo && d.intervaloMin != null ? Number(d.intervaloMin) : null);
+    }
+    if (body.pagamento) {
+      var p = body.pagamento;
+      addSet('pagamento_valor_entrada', p.valorEntrada != null ? Number(p.valorEntrada) : null);
+      addSet('pagamento_valor_restante', p.valorRestante != null ? Number(p.valorRestante) : null);
+    }
+    if (body.assinaturaBadu) {
+      addSet('assinatura_badu', body.assinaturaBadu);
+      addSet('assinatura_badu_em', body.assinaturaBaduEm || new Date().toISOString());
+      addSet('status', 'finalizado');
+    }
 
-  if (!sets.length) {
-    return res.status(400).json({ error: 'Nenhum campo para atualizar foi enviado.' });
-  }
+    if (!sets.length) {
+      return res.status(400).json({ error: 'Nenhum campo para atualizar foi enviado.' });
+    }
 
-  vals.push(row.id);
-  db.prepare('UPDATE contratos SET ' + sets.join(', ') + ' WHERE id = ?').run(...vals);
+    vals.push(row.id);
+    await pool.query('UPDATE contratos SET ' + sets.join(', ') + ' WHERE id = $' + n, vals);
 
-  var updated = getContractRow(row.id);
-  res.json(rowToFullContract(updated));
+    var updated = await getContractRow(row.id);
+    res.json(rowToFullContract(updated));
+  } catch (e) { next(e); }
 });
 
 // DELETE /api/contratos/:id — autenticado (Badu).
-router.delete('/:id', requireAuth, (req, res) => {
-  var info = db.prepare('DELETE FROM contratos WHERE id = ?').run(req.params.id.toUpperCase());
-  if (Number(info.changes) === 0) return res.status(404).json({ error: 'Contrato não encontrado.' });
-  res.json({ ok: true });
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    var result = await pool.query('DELETE FROM contratos WHERE id = $1', [req.params.id.toUpperCase()]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Contrato não encontrado.' });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 // GET /api/contratos/:id/pdf — Badu autenticado, ou público se já finalizado.
-router.get('/:id/pdf', attachOptionalAuth, (req, res) => {
-  var row = getContractRow(req.params.id.toUpperCase());
-  if (!row) return res.status(404).json({ error: 'Contrato não encontrado.' });
-  if (!req.admin && row.status !== 'finalizado') {
-    return res.status(403).json({ error: 'Este contrato ainda não foi finalizado pelo Badu.' });
-  }
+router.get('/:id/pdf', attachOptionalAuth, async (req, res, next) => {
+  try {
+    var row = await getContractRow(req.params.id.toUpperCase());
+    if (!row) return res.status(404).json({ error: 'Contrato não encontrado.' });
+    if (!req.admin && row.status !== 'finalizado') {
+      return res.status(403).json({ error: 'Este contrato ainda não foi finalizado pelo Badu.' });
+    }
 
-  var contract = rowToFullContract(row);
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'attachment; filename="contrato-' + contract.id + '.pdf"');
-  var doc = buildContractPDF(contract);
-  doc.pipe(res);
+    var contract = rowToFullContract(row);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="contrato-' + contract.id + '.pdf"');
+    var doc = buildContractPDF(contract);
+    doc.pipe(res);
+  } catch (e) { next(e); }
 });
 
 module.exports = router;

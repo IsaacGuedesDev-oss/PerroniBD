@@ -1,6 +1,8 @@
 # Backend — Badu Contratos
 
-API Node.js + Express, SQLite (`node:sqlite`, sem dependência nativa pra compilar), login do Badu por e-mail/senha com sessão em cookie `httpOnly`, CPF/CNPJ/RG criptografados em repouso (AES-256-GCM). O próprio servidor serve o frontend estático também.
+API Node.js + Express, Postgres (via `pg`), login do Badu por e-mail/senha com sessão em cookie `httpOnly`, CPF/CNPJ/RG criptografados em repouso (AES-256-GCM). O próprio servidor serve o frontend estático também.
+
+> Esta é a branch `producao`. A `main` (demo pública) ainda usa SQLite — ver nota em `DEPLOY.md`.
 
 ## Setup
 
@@ -10,7 +12,7 @@ npm install
 cp .env.example .env
 ```
 
-Gere `ENCRYPTION_KEY` e `SESSION_SECRET` (execute duas vezes, um valor pra cada):
+Preencha `DATABASE_URL` com a connection string de um Postgres (Neon ou Supabase têm plano free). Gere `ENCRYPTION_KEY` e `SESSION_SECRET` (execute duas vezes, um valor pra cada):
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
@@ -22,7 +24,7 @@ npm run create-admin -- badu@exemplo.com "uma-senha-bem-forte"
 npm start
 ```
 
-Abra `http://localhost:3000`. Requer Node 22.5+ (usa `node:sqlite`).
+Abra `http://localhost:3000`.
 
 ## Rotas
 
@@ -43,9 +45,9 @@ Abra `http://localhost:3000`. Requer Node 22.5+ (usa `node:sqlite`).
 
 ## Decisões
 
-- **SQLite via `node:sqlite`** em vez de `better-sqlite3`: mesma ideia, sem binário nativo pra compilar. Migrar pra Postgres depois é só trocar `src/db.js`.
+- **Postgres via `pg`**: a demo original usava SQLite (`node:sqlite`), mas o disco do plano gratuito do Render é efêmero — arriscado demais pra dados reais de cliente. `src/db.js` cria o schema sozinho na primeira conexão (`CREATE TABLE IF NOT EXISTS`).
 - **Sessão**: token de 32 bytes na tabela `sessions`, cookie `httpOnly` assinado. `SameSite=None`+`Secure` automático se `FRONTEND_ORIGIN` estiver definido (deploy separado).
-- **Criptografia**: `cliente_cpf_cnpj`/`cliente_rg` cifrados em `src/crypto.js`, descriptografados só pro Badu autenticado.
+- **Criptografia**: `cliente_cpf_cnpj`/`cliente_rg` cifrados em `src/crypto.js`, descriptografados só pro Badu autenticado. Perder `ENCRYPTION_KEY` torna esses dados irrecuperáveis — ver `PRODUCAO.md`.
 - **PDF no servidor** (`pdfkit`, `src/pdf.js`): é a única superfície onde CPF/RG aparece fora do banco, e só sai pro Badu ou pra quem já tem o código de um contrato finalizado.
 
 ## Dados do contratado (repo público)
@@ -54,7 +56,7 @@ CNPJ, endereço, PIX e conta do contratado vêm de env vars (`src/business.js`),
 
 ## Modo demo
 
-`DEMO_MODE=true`: banco em memória (reseta a cada restart), `src/seed.js` semeia um admin de teste e dois contratos fictícios a cada boot, frontend mostra aviso fixo no topo.
+`DEMO_MODE=true`: zera as tabelas (`TRUNCATE`) e semeia um admin de teste + dois contratos fictícios a cada boot, frontend mostra aviso fixo no topo. Use um `DATABASE_URL` dedicado à demo, nunca o de produção.
 
 ```bash
 DEMO_MODE=true npm start
@@ -62,4 +64,4 @@ DEMO_MODE=true npm start
 
 ## Deploy
 
-Ver [`../DEPLOY.md`](../DEPLOY.md) pro passo a passo completo (Render, com ou sem frontend separado).
+Demo: [`../DEPLOY.md`](../DEPLOY.md). Produção real (dados de cliente de verdade): [`../PRODUCAO.md`](../PRODUCAO.md).
