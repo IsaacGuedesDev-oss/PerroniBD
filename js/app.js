@@ -265,9 +265,12 @@ function buildSections(c, mode){
       : 'sem intervalo, em apresentação contínua';
     durParagraphs.push('2. Início do evento às ' + V(hIni) + ' do dia ' + V(dShort || null) + ', com previsão de término às ' + V(c.duracaoFinal.horaFim) + ', ' + interText + '.');
   } else {
-    durParagraphs.push('2. Início do evento às ' + V(hIni) + ' do dia ' + V(dShort || null) + '. ' + PEND('O horário previsto de término e a existência ou não de intervalo serão confirmados por Badu Produções antes da assinatura do CONTRATADO.'));
+    durParagraphs.push('2. Início do evento às ' + V(hIni) + ' do dia ' + V(dShort || null) + '. ' + PEND('O horário previsto de término e a existência ou não de intervalo serão confirmados por ' + V(biz.nomeEmpresa) + ' antes da assinatura do CONTRATADO.'));
   }
-  durParagraphs.push('3. Caso o artista ultrapasse o tempo estabelecido na cláusula anterior, será de sua inteira responsabilidade, não existindo acréscimo ao pagamento a ser efetuado pelo CONTRATADO. Porém, após o término da apresentação anunciado pelo artista, havendo desejo do CONTRATANTE e disponibilidade do CONTRATADO, será cobrado o adicional por hora de R$ 500,00 (quinhentos reais).');
+  var horaExtraText = (c.duracaoFinal && c.duracaoFinal.valorHoraExtra != null)
+    ? ('será cobrado o adicional por hora de ' + V(formatBRL(c.duracaoFinal.valorHoraExtra)) + '.')
+    : PEND('o valor do adicional por hora será definido por ' + V(biz.nomeEmpresa) + ' e confirmado nesta cláusula antes da assinatura do CONTRATADO.');
+  durParagraphs.push('3. Caso o artista ultrapasse o tempo estabelecido na cláusula anterior, será de sua inteira responsabilidade, não existindo acréscimo ao pagamento a ser efetuado pelo CONTRATADO. Porém, após o término da apresentação anunciado pelo artista, havendo desejo do CONTRATANTE e disponibilidade do CONTRATADO, ' + horaExtraText);
   sections.push({heading:'Da duração do show', paragraphs: durParagraphs});
 
   sections.push({heading:'Do repertório', paragraphs:[
@@ -297,7 +300,7 @@ function buildSections(c, mode){
     var total = Number(c.pagamento.valorEntrada) + Number(c.pagamento.valorRestante);
     payParagraphs.push('10. A CONTRATANTE se compromete a pagar a quantia total de ' + V(formatBRL(total)) + ' ao CONTRATADO em contraprestação à apresentação, sendo ' + V(formatBRL(c.pagamento.valorEntrada)) + ' de entrada e ' + V(formatBRL(c.pagamento.valorRestante)) + ' a serem pagos até a semana do show.');
   } else {
-    payParagraphs.push('10. ' + PEND('O valor total do cachê, o valor de entrada e o saldo a pagar até a semana do show serão definidos por Badu Produções e confirmados nesta cláusula antes da assinatura do CONTRATADO.'));
+    payParagraphs.push('10. ' + PEND('O valor total do cachê, o valor de entrada e o saldo a pagar até a semana do show serão definidos por ' + V(biz.nomeEmpresa) + ' e confirmados nesta cláusula antes da assinatura do CONTRATADO.'));
   }
   payParagraphs.push('Dados para pagamento — PIX: ' + V(biz.pix) + ', ou Conta ' + V(biz.bancoConta) + ', Agência ' + V(biz.bancoAgencia) + ', Banco ' + V(biz.bancoNome) + ', titular ' + V(biz.representante) + '.');
   sections.push({heading:'Do pagamento', paragraphs: payParagraphs});
@@ -328,7 +331,7 @@ function buildSections(c, mode){
 
 function renderPaperHTML(c){
   var sections = buildSections(c, 'html');
-  var html = '<div class="doc-title">Contrato de Apresentação — Badu Produções</div><div class="doc-sub">Artista: Badu Perrone · Itatiba – SP</div>';
+  var html = '<div class="doc-title">Contrato de Apresentação — ' + esc(BUSINESS_INFO.nomeEmpresa) + '</div><div class="doc-sub">Artista: ' + esc(BUSINESS_INFO.nomeArtista) + ' · ' + esc(BUSINESS_INFO.cidadeUf) + '</div>';
   sections.forEach(function(sec){
     if(sec.heading) html += '<h3>' + esc(sec.heading) + '</h3>';
     sec.paragraphs.forEach(function(p){
@@ -563,22 +566,28 @@ function syncAdminFieldsToContract(){
   var horaFim = document.getElementById('admin-f-horafim').value || null;
   var temIntervalo = document.getElementById('admin-f-intervalo').checked;
   var intervaloMinRaw = document.getElementById('admin-f-intervalomin').value;
+  var horaExtraRaw = document.getElementById('admin-f-horaextra').value;
   currentAdminContract.duracaoFinal = {
     horaFim: horaFim,
     temIntervalo: temIntervalo,
-    intervaloMin: temIntervalo ? (intervaloMinRaw ? Number(intervaloMinRaw) : null) : null
+    intervaloMin: temIntervalo ? (intervaloMinRaw ? Number(intervaloMinRaw) : null) : null,
+    valorHoraExtra: horaExtraRaw==='' ? null : Number(horaExtraRaw)
   };
-  var entradaRaw = document.getElementById('admin-f-entrada').value;
-  var restanteRaw = document.getElementById('admin-f-restante').value;
-  currentAdminContract.pagamento = {
-    valorEntrada: entradaRaw==='' ? null : Number(entradaRaw),
-    valorRestante: restanteRaw==='' ? null : Number(restanteRaw)
-  };
+  var totalRaw = document.getElementById('admin-f-valortotal').value;
+  var pctRaw = document.getElementById('admin-f-percentualentrada').value;
+  if(totalRaw!=='' && pctRaw!==''){
+    var total = Number(totalRaw);
+    var pct = Number(pctRaw);
+    var valorEntrada = Math.round(total * pct) / 100;
+    var valorRestante = Math.round((total - valorEntrada) * 100) / 100;
+    currentAdminContract.pagamento = { valorEntrada: valorEntrada, valorRestante: valorRestante };
+  } else {
+    currentAdminContract.pagamento = { valorEntrada: null, valorRestante: null };
+  }
   document.getElementById('admin-contract-preview').innerHTML = renderPaperHTML(currentAdminContract);
   var totalEl = document.getElementById('admin-total-display');
   if(currentAdminContract.pagamento.valorEntrada!=null && currentAdminContract.pagamento.valorRestante!=null){
-    var total = currentAdminContract.pagamento.valorEntrada + currentAdminContract.pagamento.valorRestante;
-    totalEl.textContent = 'Total do cachê: ' + formatBRL(total);
+    totalEl.textContent = 'Entrada: ' + formatBRL(currentAdminContract.pagamento.valorEntrada) + ' · Restante: ' + formatBRL(currentAdminContract.pagamento.valorRestante) + ' · Total: ' + formatBRL(Number(totalRaw));
   } else {
     totalEl.textContent = '';
   }
@@ -615,8 +624,16 @@ async function openAdminSign(id){
     document.getElementById('admin-f-horafim').value = (c.duracaoFinal && c.duracaoFinal.horaFim) || defaultHoraFim;
     document.getElementById('admin-f-intervalo').checked = c.duracaoFinal ? !!c.duracaoFinal.temIntervalo : true;
     document.getElementById('admin-f-intervalomin').value = (c.duracaoFinal && c.duracaoFinal.intervaloMin) ? c.duracaoFinal.intervaloMin : 30;
-    document.getElementById('admin-f-entrada').value = (c.pagamento && c.pagamento.valorEntrada!=null) ? c.pagamento.valorEntrada : '';
-    document.getElementById('admin-f-restante').value = (c.pagamento && c.pagamento.valorRestante!=null) ? c.pagamento.valorRestante : '';
+    document.getElementById('admin-f-horaextra').value = (c.duracaoFinal && c.duracaoFinal.valorHoraExtra!=null) ? c.duracaoFinal.valorHoraExtra : 500;
+    if(c.pagamento && c.pagamento.valorEntrada!=null && c.pagamento.valorRestante!=null){
+      var totalExistente = c.pagamento.valorEntrada + c.pagamento.valorRestante;
+      var pctExistente = totalExistente > 0 ? Math.round((c.pagamento.valorEntrada / totalExistente) * 100) : 30;
+      document.getElementById('admin-f-valortotal').value = totalExistente;
+      document.getElementById('admin-f-percentualentrada').value = pctExistente;
+    } else {
+      document.getElementById('admin-f-valortotal').value = '';
+      document.getElementById('admin-f-percentualentrada').value = 30;
+    }
     toggleIntervaloField();
     syncAdminFieldsToContract();
     requestAnimationFrame(function(){
@@ -784,7 +801,7 @@ document.getElementById('btn-submit-client').addEventListener('click', async fun
   showScreen('screen-confirm');
 });
 
-['admin-f-horafim','admin-f-entrada','admin-f-restante','admin-f-intervalomin'].forEach(function(id){
+['admin-f-horafim','admin-f-horaextra','admin-f-valortotal','admin-f-percentualentrada','admin-f-intervalomin'].forEach(function(id){
   var el = document.getElementById(id);
   if(el) el.addEventListener('input', syncAdminFieldsToContract);
 });
@@ -792,9 +809,9 @@ document.getElementById('admin-f-intervalo').addEventListener('change', function
 
 document.getElementById('btn-submit-badu').addEventListener('click', async function(){
   var horaFim = document.getElementById('admin-f-horafim').value;
-  var entrada = document.getElementById('admin-f-entrada').value;
-  var restante = document.getElementById('admin-f-restante').value;
-  if(!horaFim || entrada==='' || restante===''){
+  var valorTotal = document.getElementById('admin-f-valortotal').value;
+  var percentualEntrada = document.getElementById('admin-f-percentualentrada').value;
+  if(!horaFim || valorTotal==='' || percentualEntrada===''){
     toast('Preencha a duração e os valores de pagamento antes de assinar.');
     return;
   }

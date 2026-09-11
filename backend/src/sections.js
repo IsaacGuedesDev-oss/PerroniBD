@@ -55,9 +55,12 @@ function buildSections(c) {
       : 'sem intervalo, em apresentação contínua';
     durParagraphs.push('2. Início do evento às ' + V(hIni) + ' do dia ' + V(dShort || null) + ', com previsão de término às ' + V(c.duracaoFinal.horaFim) + ', ' + interText + '.');
   } else {
-    durParagraphs.push('2. Início do evento às ' + V(hIni) + ' do dia ' + V(dShort || null) + '. ' + PEND('O horário previsto de término e a existência ou não de intervalo serão confirmados por Badu Produções antes da assinatura do CONTRATADO.'));
+    durParagraphs.push('2. Início do evento às ' + V(hIni) + ' do dia ' + V(dShort || null) + '. ' + PEND('O horário previsto de término e a existência ou não de intervalo serão confirmados por ' + biz.nomeEmpresa + ' antes da assinatura do CONTRATADO.'));
   }
-  durParagraphs.push('3. Caso o artista ultrapasse o tempo estabelecido na cláusula anterior, será de sua inteira responsabilidade, não existindo acréscimo ao pagamento a ser efetuado pelo CONTRATADO. Porém, após o término da apresentação anunciado pelo artista, havendo desejo do CONTRATANTE e disponibilidade do CONTRATADO, será cobrado o adicional por hora de R$ 500,00 (quinhentos reais).');
+  var horaExtraText = (c.duracaoFinal && c.duracaoFinal.valorHoraExtra != null)
+    ? ('será cobrado o adicional por hora de ' + V(formatBRL(c.duracaoFinal.valorHoraExtra)) + '.')
+    : PEND('o valor do adicional por hora será definido por ' + biz.nomeEmpresa + ' e confirmado nesta cláusula antes da assinatura do CONTRATADO.');
+  durParagraphs.push('3. Caso o artista ultrapasse o tempo estabelecido na cláusula anterior, será de sua inteira responsabilidade, não existindo acréscimo ao pagamento a ser efetuado pelo CONTRATADO. Porém, após o término da apresentação anunciado pelo artista, havendo desejo do CONTRATANTE e disponibilidade do CONTRATADO, ' + horaExtraText);
   sections.push({ heading: 'Da duração do show', paragraphs: durParagraphs });
 
   sections.push({ heading: 'Do repertório', paragraphs: [
@@ -87,7 +90,7 @@ function buildSections(c) {
     var total = Number(c.pagamento.valorEntrada) + Number(c.pagamento.valorRestante);
     payParagraphs.push('10. A CONTRATANTE se compromete a pagar a quantia total de ' + V(formatBRL(total)) + ' ao CONTRATADO em contraprestação à apresentação, sendo ' + V(formatBRL(c.pagamento.valorEntrada)) + ' de entrada e ' + V(formatBRL(c.pagamento.valorRestante)) + ' a serem pagos até a semana do show.');
   } else {
-    payParagraphs.push('10. ' + PEND('O valor total do cachê, o valor de entrada e o saldo a pagar até a semana do show serão definidos por Badu Produções e confirmados nesta cláusula antes da assinatura do CONTRATADO.'));
+    payParagraphs.push('10. ' + PEND('O valor total do cachê, o valor de entrada e o saldo a pagar até a semana do show serão definidos por ' + biz.nomeEmpresa + ' e confirmados nesta cláusula antes da assinatura do CONTRATADO.'));
   }
   payParagraphs.push('Dados para pagamento — PIX: ' + biz.pix + ', ou Conta ' + biz.bancoConta + ', Agência ' + biz.bancoAgencia + ', Banco ' + biz.bancoNome + ', titular ' + biz.representante + '.');
   sections.push({ heading: 'Do pagamento', paragraphs: payParagraphs });

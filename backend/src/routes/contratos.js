@@ -92,6 +92,7 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
       addSet('duracao_hora_fim', d.horaFim || null);
       addSet('duracao_tem_intervalo', !!d.temIntervalo);
       addSet('duracao_intervalo_min', d.temIntervalo && d.intervaloMin != null ? Number(d.intervaloMin) : null);
+      addSet('duracao_valor_hora_extra', d.valorHoraExtra != null ? Number(d.valorHoraExtra) : null);
     }
     if (body.pagamento) {
       var p = body.pagamento;

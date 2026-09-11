@@ -40,7 +40,7 @@ Veja `backend/.env.example` pra lista completa. As que importam pra produção r
 |---|---|
 | `DATABASE_URL` | Postgres desta instância, dedicado |
 | `NODE_ENV` | `production` |
-| `BUSINESS_NOME_ARTISTA` / `BUSINESS_NOME_EMPRESA` | `Badu Perrone` / `Badu Produções` |
+| `BUSINESS_NOME_ARTISTA` / `BUSINESS_NOME_EMPRESA` | `Badu Perrone` / `Badu Produções Ltda.` |
 | `BUSINESS_CNPJ`, `BUSINESS_REPRESENTANTE`, `BUSINESS_END_*`, `BUSINESS_PIX`, `BUSINESS_BANCO_*` | dados reais do Badu |
 | `ENCRYPTION_KEY`, `SESSION_SECRET` | geradas na hora, exclusivas desta instância |
 | `FRONTEND_ORIGIN` | só se front e back forem serviços separados |

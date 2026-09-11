@@ -39,7 +39,8 @@ function rowToFullContract(row) {
     duracaoFinal: temDuracao ? {
       horaFim: row.duracao_hora_fim,
       temIntervalo: toBool(row.duracao_tem_intervalo),
-      intervaloMin: row.duracao_intervalo_min
+      intervaloMin: row.duracao_intervalo_min,
+      valorHoraExtra: row.duracao_valor_hora_extra
     } : null,
     pagamento: temPagamento ? {
       valorEntrada: row.pagamento_valor_entrada,
