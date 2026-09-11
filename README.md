@@ -2,31 +2,11 @@
 
 Geração de contratos de apresentação pro artista Badu Perrone. Cliente preenche o formulário, revisa e assina na tela; o Badu confirma duração/pagamento e assina também; PDF final sai pros dois lados.
 
+> Esta é a branch `producao` — o sistema real, com Postgres e dados reais do Badu. A demo de portfólio (dados fictícios) fica na branch `main`.
+
 ## Sobre o projeto
 
-Sistema feito pra um cliente real (Badu Perrone Produções, Itatiba-SP), publicado aqui como amostra de portfólio com autorização dele. Dados reais de clientes do Badu (nome, CPF, RG, contratos assinados) não aparecem neste repositório nem na demo.
-
-## Demo
-
-🔗 [perronibd.onrender.com](https://perronibd.onrender.com/) — dados fictícios (`DEPLOY.md`). Plano free: primeiro acesso pode levar ~30-50s.
-
-Login do painel: `admin@demo.com` / `demo12345` (credenciais públicas de propósito, é ambiente de teste). O banco roda em memória e reseta periodicamente, com dois contratos fictícios pré-carregados.
-
-### Capturas de tela
-
-| Formulário do cliente | Assinatura eletrônica |
-|---|---|
-| ![Formulário — dados do contratante](docs/screenshots/02-form-passo1.png) | ![Tela de assinatura](docs/screenshots/03-assinatura-cliente.png) |
-
-| Painel do Badu | Contrato finalizado |
-|---|---|
-| ![Painel administrativo](docs/screenshots/04-painel-admin.png) | ![Prévia do contrato finalizado](docs/screenshots/05-contrato-finalizado.png) |
-
-<details>
-<summary>Tela inicial</summary>
-
-![Landing page](docs/screenshots/01-landing.png)
-</details>
+Sistema feito pra um cliente real (Badu Perrone Produções, Itatiba-SP). Esta branch é a versão que roda com dados reais de clientes — ver checklist completo em [`PRODUCAO.md`](PRODUCAO.md) antes de colocar no ar.
 
 ## Segurança
 
@@ -34,7 +14,7 @@ Login do painel: `admin@demo.com` / `demo12345` (credenciais públicas de propó
 - Sessão via cookie `httpOnly`, senha com `bcrypt` — sem localStorage/JWT no front
 - Consulta pública nunca devolve CPF/RG; o PDF completo só sai pro Badu autenticado ou pra quem já tem o código de um contrato finalizado
 - Dados do contratado (CNPJ, endereço, PIX, conta) vêm de variável de ambiente, não do código (`backend/src/business.js`)
-- Modo demo isolado: só dados fictícios, banco efêmero, aviso fixo na tela
+- Perder `ENCRYPTION_KEY` torna CPF/RG já salvos irrecuperáveis — ver aviso em `PRODUCAO.md`
 
 ## Estrutura
 
@@ -44,10 +24,9 @@ badu-contratos/
 ├── css/styles.css
 ├── js/app.js            # formulário, assinatura, chamadas à API, painel admin
 ├── assets/badu-*.jpg    # fotos do carrossel (material de divulgação do artista)
-├── docs/screenshots/
 ├── backend/             # API + banco (ver backend/README.md)
 ├── BACKEND_SPEC.md       # spec original do backend
-├── DEPLOY.md
+├── PRODUCAO.md           # checklist de deploy real
 └── LICENSE
 ```
 
@@ -56,18 +35,12 @@ badu-contratos/
 ```bash
 cd backend
 npm install
-cp .env.example .env        # preencha ENCRYPTION_KEY e SESSION_SECRET
+cp .env.example .env        # preencha DATABASE_URL, ENCRYPTION_KEY e SESSION_SECRET
 npm run create-admin -- badu@exemplo.com "uma-senha-bem-forte"
 npm start
 ```
 
 Abra `http://localhost:3000`. Detalhes de cada rota em [`backend/README.md`](backend/README.md).
-
-Pra rodar igual à demo (dados fictícios, sem precisar de `create-admin`):
-
-```bash
-DEMO_MODE=true npm start
-```
 
 ## Funcionalidades
 
@@ -79,13 +52,8 @@ DEMO_MODE=true npm start
   - Edição de duração, intervalo e valores (entrada/restante)
   - Prévia em tempo real, assinatura do Badu, exclusão com confirmação
 - PDF final gerado no servidor (`pdfkit`), com as duas assinaturas
-- CPF/CNPJ/RG criptografados em repouso
-- Modo demo pronto pra deploy público
-
-## Branches
-
-`main` é a demo do portfólio, com SQLite. `producao` migrou pra Postgres — necessário pra rodar com dados reais de cliente sem risco de perda no disco efêmero de planos gratuitos. Ver `PRODUCAO.md` na branch `producao`.
+- CPF/CNPJ/RG criptografados em repouso, banco Postgres persistente
 
 ## Licença
 
-MIT, só pro código (ver [`LICENSE`](LICENSE)). Não cobre o nome/marca "Badu Perrone" / "Badu Produções", as fotos em `assets/` nem o texto do contrato — isso é do cliente, aparece aqui só como amostra de portfólio.
+MIT, só pro código (ver [`LICENSE`](LICENSE)). Não cobre o nome/marca "Badu Perrone" / "Badu Produções", as fotos em `assets/` nem o texto do contrato — isso é do cliente.

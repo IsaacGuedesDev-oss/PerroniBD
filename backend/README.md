@@ -2,7 +2,7 @@
 
 API Node.js + Express, Postgres (via `pg`), login do Badu por e-mail/senha com sessão em cookie `httpOnly`, CPF/CNPJ/RG criptografados em repouso (AES-256-GCM). O próprio servidor serve o frontend estático também.
 
-> Esta é a branch `producao`. A `main` (demo pública) ainda usa SQLite — ver nota em `DEPLOY.md`.
+> Esta é a branch `producao`, pra rodar com dados reais de cliente. A `main` (demo de portfólio) usa SQLite e dados fictícios — não misture os dois.
 
 ## Setup
 
@@ -39,13 +39,13 @@ Abra `http://localhost:3000`.
 | POST | `/api/auth/login` | público | `{ email, senha }` → cookie de sessão |
 | POST | `/api/auth/logout` | Badu | encerra sessão |
 | GET | `/api/auth/me` | Badu | confirma sessão válida |
-| GET | `/api/config` | público | dados do contratado pro texto do contrato + flag de modo demo |
+| GET | `/api/config` | público | dados do contratado pro texto do contrato |
 
 `*` com sessão do Badu devolve o registro completo; sem sessão, só o resumo.
 
 ## Decisões
 
-- **Postgres via `pg`**: a demo original usava SQLite (`node:sqlite`), mas o disco do plano gratuito do Render é efêmero — arriscado demais pra dados reais de cliente. `src/db.js` cria o schema sozinho na primeira conexão (`CREATE TABLE IF NOT EXISTS`).
+- **Postgres via `pg`**: disco do plano gratuito de hospedagens tipo Render é efêmero — arriscado demais pra dados reais de cliente. `src/db.js` cria o schema sozinho na primeira conexão (`CREATE TABLE IF NOT EXISTS`).
 - **Sessão**: token de 32 bytes na tabela `sessions`, cookie `httpOnly` assinado. `SameSite=None`+`Secure` automático se `FRONTEND_ORIGIN` estiver definido (deploy separado).
 - **Criptografia**: `cliente_cpf_cnpj`/`cliente_rg` cifrados em `src/crypto.js`, descriptografados só pro Badu autenticado. Perder `ENCRYPTION_KEY` torna esses dados irrecuperáveis — ver `PRODUCAO.md`.
 - **PDF no servidor** (`pdfkit`, `src/pdf.js`): é a única superfície onde CPF/RG aparece fora do banco, e só sai pro Badu ou pra quem já tem o código de um contrato finalizado.
@@ -54,14 +54,6 @@ Abra `http://localhost:3000`.
 
 CNPJ, endereço, PIX e conta do contratado vêm de env vars (`src/business.js`), não do código — dados reais de terceiro, repo público. `GET /api/config` expõe isso pro frontend montar o contrato (não é segredo do sistema, é conteúdo do próprio documento; só não fica escrito no histórico do repositório).
 
-## Modo demo
-
-`DEMO_MODE=true`: zera as tabelas (`TRUNCATE`) e semeia um admin de teste + dois contratos fictícios a cada boot, frontend mostra aviso fixo no topo. Use um `DATABASE_URL` dedicado à demo, nunca o de produção.
-
-```bash
-DEMO_MODE=true npm start
-```
-
 ## Deploy
 
-Demo: [`../DEPLOY.md`](../DEPLOY.md). Produção real (dados de cliente de verdade): [`../PRODUCAO.md`](../PRODUCAO.md).
+Ver [`../PRODUCAO.md`](../PRODUCAO.md) na raiz do repositório.

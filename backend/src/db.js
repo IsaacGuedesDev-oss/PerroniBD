@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const { isDemoMode } = require('./demo');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -73,16 +72,11 @@ const SCHEMA_SQL = `
 
 let ready = null;
 
-// Roda a criação do schema (idempotente) e, em modo demo, zera e re-semeia os dados
-// fictícios a cada boot — chamado uma vez em server.js antes de subir o servidor.
+// Roda a criação do schema (idempotente) — chamado uma vez em server.js antes de
+// subir o servidor.
 function init() {
   if (!ready) {
-    ready = pool.query(SCHEMA_SQL).then(async () => {
-      if (isDemoMode()) {
-        await pool.query('TRUNCATE TABLE sessions, contratos, admins RESTART IDENTITY CASCADE');
-        await require('./seed').seedDemoData(pool);
-      }
-    });
+    ready = pool.query(SCHEMA_SQL);
   }
   return ready;
 }

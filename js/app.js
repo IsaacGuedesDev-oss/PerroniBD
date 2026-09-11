@@ -231,19 +231,6 @@ var BUSINESS_INFO = {
 async function loadBusinessInfo(){
   var r = await apiJson('/config');
   if(r.ok && r.data) BUSINESS_INFO = r.data;
-  if(BUSINESS_INFO.demoMode) showDemoBanner();
-}
-
-function showDemoBanner(){
-  if(document.getElementById('demo-banner')) return;
-  var el = document.createElement('div');
-  el.id = 'demo-banner';
-  el.setAttribute('role', 'status');
-  el.style.cssText = 'position:sticky;top:0;z-index:9999;background:#B8341F;color:#fff;'
-    + 'font-family:var(--font-mono, monospace);font-size:12.5px;text-align:center;'
-    + 'padding:8px 14px;letter-spacing:0.02em;';
-  el.textContent = '🔧 Ambiente de demonstração — dados fictícios, não preencha informações reais. O banco é reiniciado periodicamente.';
-  document.body.insertBefore(el, document.body.firstChild);
 }
 
 function buildSections(c, mode){
