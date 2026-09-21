@@ -54,6 +54,10 @@ const SCHEMA_SQL = `
     duracao_intervalo_min INTEGER,
     duracao_valor_hora_extra DOUBLE PRECISION,
 
+    equip_fornece_som BOOLEAN,
+    equip_fornece_iluminacao BOOLEAN,
+    equip_fornece_dj BOOLEAN,
+
     pagamento_valor_entrada DOUBLE PRECISION,
     pagamento_valor_restante DOUBLE PRECISION,
 
@@ -63,9 +67,12 @@ const SCHEMA_SQL = `
     assinatura_badu_em TEXT
   );
 
-  -- Coluna adicionada depois da criação inicial da tabela — ADD COLUMN IF NOT EXISTS
-  -- garante que um banco já existente também ganhe essa coluna.
+  -- Colunas adicionadas depois da criação inicial da tabela — ADD COLUMN IF NOT EXISTS
+  -- garante que um banco já existente também ganhe essas colunas.
   ALTER TABLE contratos ADD COLUMN IF NOT EXISTS duracao_valor_hora_extra DOUBLE PRECISION;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS equip_fornece_som BOOLEAN;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS equip_fornece_iluminacao BOOLEAN;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS equip_fornece_dj BOOLEAN;
 
   CREATE INDEX IF NOT EXISTS idx_sessions_admin ON sessions(admin_id);
   CREATE INDEX IF NOT EXISTS idx_contratos_created ON contratos(created_at);

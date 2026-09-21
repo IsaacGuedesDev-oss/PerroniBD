@@ -80,8 +80,6 @@
         <div class="step" data-step="1">Contratante</div>
         <div class="step" data-step="2">Endereço</div>
         <div class="step" data-step="3">Evento</div>
-        <div class="step" data-step="4">Contrato</div>
-        <div class="step" data-step="5">Assinatura</div>
       </div>
 
       <!-- STEP 1 -->
@@ -215,43 +213,7 @@
         </div>
         <div class="form-nav">
           <button class="btn btn-ghost" data-prev type="button">Voltar</button>
-          <button class="btn btn-primary" data-next type="button">Revisar contrato</button>
-        </div>
-      </div>
-
-      <!-- STEP 4: REVIEW -->
-      <div class="panel form-step" data-step="4" style="display:none;">
-        <h2>Revise o contrato</h2>
-        <p class="panel-sub">Confira se os dados estão corretos. As cláusulas gerais são fixas e não podem ser alteradas por aqui.</p>
-        <div class="paper" id="contract-preview"></div>
-        <div class="form-nav">
-          <button class="btn btn-ghost" data-prev type="button">Voltar e corrigir</button>
-          <button class="btn btn-primary" data-next type="button">Assinar contrato</button>
-        </div>
-      </div>
-
-      <!-- STEP 5: SIGN -->
-      <div class="panel form-step" data-step="5" style="display:none;">
-        <h2>Sua assinatura</h2>
-        <p class="panel-sub">Desenhe sua assinatura no campo abaixo com o dedo ou o mouse.</p>
-        <div class="sign-block">
-          <div class="sign-canvas-wrap">
-            <canvas id="sign-canvas-client"></canvas>
-            <div class="sign-baseline"></div>
-            <div class="sign-placeholder" id="sign-placeholder-client">assine aqui</div>
-          </div>
-          <div class="sign-tools">
-            <span class="hint">CONTRATANTE — assinatura eletrônica</span>
-            <button class="btn btn-ghost btn-sm" id="btn-clear-sign-client" type="button">Limpar</button>
-          </div>
-        </div>
-        <div class="agree-row">
-          <input type="checkbox" id="chk-agree">
-          <label for="chk-agree">Li e concordo com todas as cláusulas do contrato acima. Estou ciente de que esta assinatura eletrônica vale como aceite dos termos.</label>
-        </div>
-        <div class="form-nav">
-          <button class="btn btn-ghost" data-prev type="button">Voltar</button>
-          <button class="btn btn-primary" id="btn-submit-client" type="button" disabled>Assinar e enviar</button>
+          <button class="btn btn-primary" id="btn-submit-client-data" type="button">Enviar para o Badu revisar</button>
         </div>
       </div>
     </div>
@@ -327,6 +289,90 @@
         <p class="panel-sub" id="admin-sign-sub"></p>
 
         <div class="badu-terms" id="badu-terms-block">
+          <h3 class="terms-heading">Dados do evento — corrija se precisar</h3>
+          <div class="field-row thirds">
+            <div class="field">
+              <label>Rua do local</label>
+              <input type="text" id="admin-f-localRua">
+            </div>
+            <div class="field">
+              <label>Número</label>
+              <input type="text" id="admin-f-localNumero">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Bairro</label>
+              <input type="text" id="admin-f-localBairro">
+            </div>
+            <div class="field">
+              <label>Cidade</label>
+              <input type="text" id="admin-f-localCidade">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>CEP do local</label>
+              <input type="text" id="admin-f-localCep">
+            </div>
+            <div></div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Data do show</label>
+              <input type="date" id="admin-f-dataevento">
+            </div>
+            <div class="field">
+              <label>Horário de início</label>
+              <input type="time" id="admin-f-horaevento">
+            </div>
+          </div>
+
+          <h3 class="terms-heading">Endereço do contratante — corrija se precisar</h3>
+          <div class="field-row thirds">
+            <div class="field">
+              <label>Rua</label>
+              <input type="text" id="admin-f-endRua">
+            </div>
+            <div class="field">
+              <label>Número</label>
+              <input type="text" id="admin-f-endNumero">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Bairro</label>
+              <input type="text" id="admin-f-endBairro">
+            </div>
+            <div class="field">
+              <label>Cidade</label>
+              <input type="text" id="admin-f-endCidade">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>CEP</label>
+              <input type="text" id="admin-f-endCep">
+            </div>
+            <div></div>
+          </div>
+
+          <h3 class="terms-heading">Equipamentos que você vai fornecer</h3>
+          <div class="field-row thirds">
+            <div class="field"><div class="check-field">
+              <input type="checkbox" id="admin-f-equip-som" checked>
+              <label for="admin-f-equip-som">Estrutura de som</label>
+            </div></div>
+            <div class="field"><div class="check-field">
+              <input type="checkbox" id="admin-f-equip-iluminacao" checked>
+              <label for="admin-f-equip-iluminacao">Iluminação</label>
+            </div></div>
+            <div class="field"><div class="check-field">
+              <input type="checkbox" id="admin-f-equip-dj" checked>
+              <label for="admin-f-equip-dj">DJ</label>
+            </div></div>
+          </div>
+
           <h3 class="terms-heading">Duração do show — só você define</h3>
           <div class="field-row">
             <div class="field">
@@ -379,7 +425,7 @@
           </div>
           <div class="form-nav">
             <span></span>
-            <button class="btn btn-primary" id="btn-submit-badu" type="button">Assinar e finalizar contrato</button>
+            <button class="btn btn-primary" id="btn-submit-badu" type="button">Assinar e enviar para o cliente assinar</button>
           </div>
         </div>
 

@@ -36,6 +36,11 @@ function formatBRL(v){
   if(isNaN(n)) return '';
   return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
+function joinPt(items){
+  if(!items.length) return '';
+  if(items.length===1) return items[0];
+  return items.slice(0,-1).join(', ') + ' e ' + items[items.length-1];
+}
 function maskCEP(raw){
   var v = raw.replace(/\D/g,'').slice(0,8);
   if(v.length>5) return v.slice(0,5)+'-'+v.slice(5);
@@ -277,8 +282,16 @@ function buildSections(c, mode){
     '4. O repertório musical a ser apresentado no dia do show será escolhido a critério do CONTRATADO, ficando impossibilitado ao CONTRATANTE opor-se à escolha das músicas, podendo somente o CONTRATANTE dar sugestões sobre o repertório, sem vinculação de aceitação pelo CONTRATADO.'
   ]});
 
+  var eq = c.equipamentos || {fornecerSom:true, fornecerIluminacao:true, fornecerDj:true};
+  var eqItems = [];
+  if(eq.fornecerSom) eqItems.push('estrutura de som');
+  if(eq.fornecerIluminacao) eqItems.push('iluminação');
+  if(eq.fornecerDj) eqItems.push('DJ');
+  var eqIntro = eqItems.length
+    ? ('O CONTRATADO fornecerá todo instrumento musical necessário à apresentação, comprometendo-se ao fornecimento de ' + joinPt(eqItems) + '.')
+    : 'O CONTRATADO fornecerá todo instrumento musical necessário à apresentação.';
   sections.push({heading:'Dos equipamentos', paragraphs:[
-    '5. O CONTRATADO fornecerá todo instrumento musical necessário à apresentação, comprometendo-se ao fornecimento da estrutura de som, iluminação e DJ. A CONTRATANTE compromete-se a garantir:',
+    '5. ' + eqIntro + ' A CONTRATANTE compromete-se a garantir:',
     {list:[
       'Fornecimento de energia 110v ou 220v, próximo ao local do show;',
       'Local coberto para a realização e devida proteção dos equipamentos em caso de chuva.'
@@ -352,6 +365,7 @@ function newDraft(){
     cliente:{nome:'',nacionalidade:'Brasileira',profissao:'',rg:'',cpfCnpj:'',endRua:'',endNumero:'',endBairro:'',endCidade:'',endCep:''},
     evento:{localRua:'',localNumero:'',localBairro:'',localCidade:'',localCep:'',data:'',hora:'20:00'},
     duracaoFinal:null,
+    equipamentos:{fornecerSom:true, fornecerIluminacao:true, fornecerDj:true},
     pagamento:null,
     assinaturaCliente:null, assinaturaClienteEm:null,
     assinaturaBadu:null, assinaturaBaduEm:null
@@ -359,7 +373,6 @@ function newDraft(){
 }
 var draft = newDraft();
 var currentStep = 1;
-var clientPad = null;
 var baduPad = null;
 var currentAdminContract = null;
 
@@ -384,16 +397,6 @@ function validateStep(step){
   return ok;
 }
 
-function renderContractPreview(){
-  document.getElementById('contract-preview').innerHTML = renderPaperHTML(draft);
-}
-
-function ensureClientPad(){
-  if(!clientPad){
-    clientPad = new SignaturePad(document.getElementById('sign-canvas-client'), document.getElementById('sign-placeholder-client'));
-  }
-}
-
 function goStep(step){
   document.querySelectorAll('.form-step').forEach(function(p){
     p.style.display = (Number(p.dataset.step)===step) ? 'block' : 'none';
@@ -404,8 +407,6 @@ function goStep(step){
     s.classList.toggle('done', n<step);
   });
   currentStep = step;
-  if(step===4){ renderContractPreview(); }
-  if(step===5){ requestAnimationFrame(ensureClientPad); }
   var shell = document.querySelector('#screen-form .app-shell');
   if(shell) shell.scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -418,8 +419,6 @@ function resetFormFields(){
     else{ i.value=''; }
   });
   document.querySelectorAll('#screen-form .field').forEach(function(f){ f.classList.remove('err'); });
-  document.getElementById('btn-submit-client').disabled = true;
-  if(clientPad) clientPad.clear();
 }
 
 /* ================= VOUCHER / LOOKUP RENDER ================= */
@@ -455,6 +454,7 @@ function showVoucher(c){
 
 function renderLookupResult(c){
   var target = document.getElementById('lookup-result');
+  if(c.status==='aguardando_cliente'){ renderLookupSignStep(c, target); return; }
   var isFinal = c.status==='finalizado';
   target.innerHTML =
     '<div class="voucher" style="margin:0;">' +
@@ -477,6 +477,59 @@ function renderLookupResult(c){
       downloadContractPDF(c.id);
     });
   }
+}
+
+// Etapa final: o Badu já revisou/assinou, agora o cliente confere o contrato inteiro
+// (já com a assinatura do Badu) e assina por último — isso finaliza o contrato.
+function renderLookupSignStep(c, target){
+  target.innerHTML =
+    '<div class="panel" style="padding:0;">' +
+      '<h2 style="font-size:22px;">Revise e assine o contrato</h2>' +
+      '<p class="panel-sub">O Badu já revisou os dados e assinou. Confira tudo com atenção e assine para finalizar.</p>' +
+      '<div class="paper" id="lookup-contract-preview"></div>' +
+      '<div class="sign-block">' +
+        '<div class="sign-canvas-wrap">' +
+          '<canvas id="sign-canvas-lookup"></canvas>' +
+          '<div class="sign-baseline"></div>' +
+          '<div class="sign-placeholder" id="sign-placeholder-lookup">assine aqui</div>' +
+        '</div>' +
+        '<div class="sign-tools">' +
+          '<span class="hint">CONTRATANTE — assinatura eletrônica</span>' +
+          '<button class="btn btn-ghost btn-sm" id="btn-clear-sign-lookup" type="button">Limpar</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="agree-row">' +
+        '<input type="checkbox" id="chk-agree-lookup">' +
+        '<label for="chk-agree-lookup">Li e concordo com todas as cláusulas do contrato acima. Estou ciente de que esta assinatura eletrônica vale como aceite dos termos.</label>' +
+      '</div>' +
+      '<div class="form-nav">' +
+        '<span></span>' +
+        '<button class="btn btn-primary" id="btn-submit-lookup-sign" type="button" disabled>Assinar e finalizar</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lookup-contract-preview').innerHTML = renderPaperHTML(c);
+  var pad = new SignaturePad(document.getElementById('sign-canvas-lookup'), document.getElementById('sign-placeholder-lookup'));
+  document.getElementById('btn-clear-sign-lookup').addEventListener('click', function(){ pad.clear(); });
+  document.getElementById('chk-agree-lookup').addEventListener('change', function(e){
+    document.getElementById('btn-submit-lookup-sign').disabled = !e.target.checked;
+  });
+  document.getElementById('btn-submit-lookup-sign').addEventListener('click', async function(){
+    if(pad.isEmpty()){ toast('Desenhe sua assinatura antes de continuar.'); return; }
+    var btn = this;
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    var r = await apiJson('/contratos/'+encodeURIComponent(c.id)+'/assinatura-cliente', {
+      method:'PATCH',
+      body: JSON.stringify({ assinaturaCliente: pad.toDataURL(), assinaturaClienteEm: new Date().toISOString() })
+    });
+    if(!r.ok){
+      btn.disabled = false; btn.textContent = 'Assinar e finalizar';
+      toast((r.data && r.data.error) || 'Não foi possível salvar. Tente novamente.');
+      return;
+    }
+    toast('Contrato assinado com sucesso!');
+    showVoucher(r.data);
+    showScreen('screen-confirm');
+  });
 }
 
 async function doLookup(codeRaw){
@@ -504,10 +557,12 @@ async function openAdminDashboard(){
   contracts.sort(function(a,b){ return new Date(b.createdAt) - new Date(a.createdAt); });
   var total = contracts.length;
   var pend = contracts.filter(function(c){ return c.status==='aguardando_badu'; }).length;
+  var aguardCliente = contracts.filter(function(c){ return c.status==='aguardando_cliente'; }).length;
   var done = contracts.filter(function(c){ return c.status==='finalizado'; }).length;
   statsEl.innerHTML =
     '<div class="stat-card"><div class="num">'+total+'</div><div class="lbl">Total</div></div>' +
-    '<div class="stat-card"><div class="num">'+pend+'</div><div class="lbl">Aguardando assinatura</div></div>' +
+    '<div class="stat-card"><div class="num">'+pend+'</div><div class="lbl">Aguardando você</div></div>' +
+    '<div class="stat-card"><div class="num">'+aguardCliente+'</div><div class="lbl">Aguardando cliente</div></div>' +
     '<div class="stat-card"><div class="num">'+done+'</div><div class="lbl">Finalizados</div></div>';
   if(total===0){ listEl.innerHTML = emptyLookup('Nenhum contrato gerado ainda.'); return; }
 
@@ -520,15 +575,18 @@ async function openAdminDashboard(){
   var dayKeys = Object.keys(groups).sort(function(a,b){ return b.localeCompare(a); });
   listEl.innerHTML = dayKeys.map(function(dayKey){
     var rows = groups[dayKey].map(function(c){
-      var isFinal = c.status==='finalizado';
+      var badgeClass = c.status==='finalizado' ? 'done' : (c.status==='aguardando_cliente' ? 'pending-client' : 'wait');
+      var badgeLabel = c.status==='finalizado' ? 'Finalizado' : (c.status==='aguardando_cliente' ? 'Aguardando cliente' : 'Aguardando você');
+      var btnLabel = c.status==='finalizado' ? 'Ver / baixar' : (c.status==='aguardando_cliente' ? 'Ver / editar' : 'Revisar e assinar');
+      var btnClass = c.status==='finalizado' ? 'btn-ghost' : 'btn-primary';
       return '<div class="contract-row">' +
         '<div class="cinfo">' +
           '<div class="cname">' + esc(c.cliente.nome||'—') + '</div>' +
           '<div class="cmeta">' + esc(c.id) + ' · show em ' + esc(dateShort(c.evento.data)) + '</div>' +
         '</div>' +
         '<div class="cactions">' +
-          '<span class="badge ' + (isFinal?'done':'wait') + '">' + (isFinal?'Finalizado':'Aguardando Badu') + '</span>' +
-          '<button class="btn btn-sm ' + (isFinal?'btn-ghost':'btn-primary') + '" data-open-contract="' + esc(c.id) + '" type="button">' + (isFinal?'Ver / baixar':'Assinar') + '</button>' +
+          '<span class="badge ' + badgeClass + '">' + badgeLabel + '</span>' +
+          '<button class="btn btn-sm ' + btnClass + '" data-open-contract="' + esc(c.id) + '" type="button">' + btnLabel + '</button>' +
           '<button class="btn btn-sm btn-danger-ghost" data-delete-contract="' + esc(c.id) + '" type="button">Excluir</button>' +
         '</div>' +
       '</div>';
@@ -563,6 +621,27 @@ function toggleIntervaloField(){
 
 function syncAdminFieldsToContract(){
   if(!currentAdminContract) return;
+  currentAdminContract.evento = Object.assign({}, currentAdminContract.evento, {
+    localRua: document.getElementById('admin-f-localRua').value,
+    localNumero: document.getElementById('admin-f-localNumero').value,
+    localBairro: document.getElementById('admin-f-localBairro').value,
+    localCidade: document.getElementById('admin-f-localCidade').value,
+    localCep: document.getElementById('admin-f-localCep').value,
+    data: document.getElementById('admin-f-dataevento').value,
+    hora: document.getElementById('admin-f-horaevento').value
+  });
+  currentAdminContract.cliente = Object.assign({}, currentAdminContract.cliente, {
+    endRua: document.getElementById('admin-f-endRua').value,
+    endNumero: document.getElementById('admin-f-endNumero').value,
+    endBairro: document.getElementById('admin-f-endBairro').value,
+    endCidade: document.getElementById('admin-f-endCidade').value,
+    endCep: document.getElementById('admin-f-endCep').value
+  });
+  currentAdminContract.equipamentos = {
+    fornecerSom: document.getElementById('admin-f-equip-som').checked,
+    fornecerIluminacao: document.getElementById('admin-f-equip-iluminacao').checked,
+    fornecerDj: document.getElementById('admin-f-equip-dj').checked
+  };
   var horaFim = document.getElementById('admin-f-horafim').value || null;
   var temIntervalo = document.getElementById('admin-f-intervalo').checked;
   var intervaloMinRaw = document.getElementById('admin-f-intervalomin').value;
@@ -620,6 +699,21 @@ async function openAdminSign(id){
     termsBlock.style.display='block';
     signArea.style.display='block';
     already.style.display='none';
+    document.getElementById('admin-f-localRua').value = c.evento.localRua || '';
+    document.getElementById('admin-f-localNumero').value = c.evento.localNumero || '';
+    document.getElementById('admin-f-localBairro').value = c.evento.localBairro || '';
+    document.getElementById('admin-f-localCidade').value = c.evento.localCidade || '';
+    document.getElementById('admin-f-localCep').value = c.evento.localCep || '';
+    document.getElementById('admin-f-dataevento').value = c.evento.data || '';
+    document.getElementById('admin-f-horaevento').value = c.evento.hora || '';
+    document.getElementById('admin-f-endRua').value = c.cliente.endRua || '';
+    document.getElementById('admin-f-endNumero').value = c.cliente.endNumero || '';
+    document.getElementById('admin-f-endBairro').value = c.cliente.endBairro || '';
+    document.getElementById('admin-f-endCidade').value = c.cliente.endCidade || '';
+    document.getElementById('admin-f-endCep').value = c.cliente.endCep || '';
+    document.getElementById('admin-f-equip-som').checked = c.equipamentos ? !!c.equipamentos.fornecerSom : true;
+    document.getElementById('admin-f-equip-iluminacao').checked = c.equipamentos ? !!c.equipamentos.fornecerIluminacao : true;
+    document.getElementById('admin-f-equip-dj').checked = c.equipamentos ? !!c.equipamentos.fornecerDj : true;
     var defaultHoraFim = addHoursToTime(c.evento.hora, 3);
     document.getElementById('admin-f-horafim').value = (c.duracaoFinal && c.duracaoFinal.horaFim) || defaultHoraFim;
     document.getElementById('admin-f-intervalo').checked = c.duracaoFinal ? !!c.duracaoFinal.temIntervalo : true;
@@ -781,36 +875,45 @@ document.getElementById('f-rg').addEventListener('input', function(e){ e.target.
 document.getElementById('f-endCep').addEventListener('input', function(e){ e.target.value = maskCEP(e.target.value); });
 document.getElementById('f-localCep').addEventListener('input', function(e){ e.target.value = maskCEP(e.target.value); });
 
-document.getElementById('chk-agree').addEventListener('change', function(){
-  document.getElementById('btn-submit-client').disabled = !this.checked;
-});
-document.getElementById('btn-clear-sign-client').addEventListener('click', function(){ if(clientPad) clientPad.clear(); });
 document.getElementById('btn-clear-sign-badu').addEventListener('click', function(){ if(baduPad) baduPad.clear(); });
 
-document.getElementById('btn-submit-client').addEventListener('click', async function(){
-  if(!clientPad || clientPad.isEmpty()){ toast('Desenhe sua assinatura antes de continuar.'); return; }
+document.getElementById('btn-submit-client-data').addEventListener('click', async function(){
+  if(!validateStep(3)) return;
   var btn = this;
   btn.disabled = true; btn.textContent = 'Enviando…';
-  draft.assinaturaCliente = clientPad.toDataURL();
-  draft.assinaturaClienteEm = new Date().toISOString();
   var saved = await createContract(draft);
-  btn.disabled = false; btn.textContent = 'Assinar e enviar';
+  btn.disabled = false; btn.textContent = 'Enviar para o Badu revisar';
   if(!saved){ toast('Não foi possível salvar. Tente novamente.'); return; }
   draft = saved;
   showVoucher(draft);
   showScreen('screen-confirm');
 });
 
-['admin-f-horafim','admin-f-horaextra','admin-f-valortotal','admin-f-percentualentrada','admin-f-intervalomin'].forEach(function(id){
+[
+  'admin-f-localRua','admin-f-localNumero','admin-f-localBairro','admin-f-localCidade','admin-f-localCep',
+  'admin-f-dataevento','admin-f-horaevento',
+  'admin-f-endRua','admin-f-endNumero','admin-f-endBairro','admin-f-endCidade','admin-f-endCep',
+  'admin-f-horafim','admin-f-horaextra','admin-f-valortotal','admin-f-percentualentrada','admin-f-intervalomin'
+].forEach(function(id){
   var el = document.getElementById(id);
   if(el) el.addEventListener('input', syncAdminFieldsToContract);
 });
 document.getElementById('admin-f-intervalo').addEventListener('change', function(){ toggleIntervaloField(); syncAdminFieldsToContract(); });
+['admin-f-equip-som','admin-f-equip-iluminacao','admin-f-equip-dj'].forEach(function(id){
+  document.getElementById(id).addEventListener('change', syncAdminFieldsToContract);
+});
 
 document.getElementById('btn-submit-badu').addEventListener('click', async function(){
   var horaFim = document.getElementById('admin-f-horafim').value;
   var valorTotal = document.getElementById('admin-f-valortotal').value;
   var percentualEntrada = document.getElementById('admin-f-percentualentrada').value;
+  var dataEvento = document.getElementById('admin-f-dataevento').value;
+  var horaEvento = document.getElementById('admin-f-horaevento').value;
+  var localRua = document.getElementById('admin-f-localRua').value;
+  if(!dataEvento || !horaEvento || !localRua){
+    toast('Preencha os dados do evento antes de assinar.');
+    return;
+  }
   if(!horaFim || valorTotal==='' || percentualEntrada===''){
     toast('Preencha a duração e os valores de pagamento antes de assinar.');
     return;
@@ -820,17 +923,26 @@ document.getElementById('btn-submit-badu').addEventListener('click', async funct
   var btn = this;
   btn.disabled = true; btn.textContent = 'Salvando…';
   var patch = {
+    cliente: {
+      endRua: currentAdminContract.cliente.endRua,
+      endNumero: currentAdminContract.cliente.endNumero,
+      endBairro: currentAdminContract.cliente.endBairro,
+      endCidade: currentAdminContract.cliente.endCidade,
+      endCep: currentAdminContract.cliente.endCep
+    },
+    evento: currentAdminContract.evento,
+    equipamentos: currentAdminContract.equipamentos,
     duracaoFinal: currentAdminContract.duracaoFinal,
     pagamento: currentAdminContract.pagamento,
     assinaturaBadu: baduPad.toDataURL(),
     assinaturaBaduEm: new Date().toISOString()
   };
   var r = await adminApi('/contratos/'+encodeURIComponent(currentAdminContract.id), {method:'PATCH', body: JSON.stringify(patch)});
-  btn.disabled = false; btn.textContent = 'Assinar e finalizar contrato';
+  btn.disabled = false; btn.textContent = 'Assinar e enviar para o cliente assinar';
   if(r.status === 401) return;
-  if(!r.ok){ toast('Não foi possível salvar.'); return; }
+  if(!r.ok){ toast((r.data && r.data.error) || 'Não foi possível salvar.'); return; }
   currentAdminContract = r.data;
-  toast('Contrato finalizado com sucesso.');
+  toast('Assinado! Agora só falta o cliente assinar pra finalizar.');
   openAdminSign(currentAdminContract.id);
 });
 

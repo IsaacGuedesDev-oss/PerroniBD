@@ -502,6 +502,7 @@ input,select,textarea{font-family:inherit;}
 }
 .badge.wait{color:#E8B23A;background:rgba(232,178,58,0.1);border:1px solid rgba(232,178,58,0.3);}
 .badge.done{color:var(--teal);background:rgba(47,182,172,0.1);border:1px solid rgba(47,182,172,0.3);}
+.badge.pending-client{color:var(--red);background:rgba(232,72,46,0.1);border:1px solid rgba(232,72,46,0.3);}
 .contract-row .cactions{display:flex;gap:8px;align-items:center;}
 .empty-state{
   text-align:center;padding:60px 20px;color:var(--ink-faint);

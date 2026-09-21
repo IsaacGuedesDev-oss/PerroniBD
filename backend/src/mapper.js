@@ -42,6 +42,11 @@ function rowToFullContract(row) {
       intervaloMin: row.duracao_intervalo_min,
       valorHoraExtra: row.duracao_valor_hora_extra
     } : null,
+    equipamentos: {
+      fornecerSom: row.equip_fornece_som !== false,
+      fornecerIluminacao: row.equip_fornece_iluminacao !== false,
+      fornecerDj: row.equip_fornece_dj !== false
+    },
     pagamento: temPagamento ? {
       valorEntrada: row.pagamento_valor_entrada,
       valorRestante: row.pagamento_valor_restante
@@ -96,9 +101,7 @@ function createBodyToRow(id, createdAt, body) {
     evento_local_cidade: evento.localCidade || '',
     evento_local_cep: evento.localCep || '',
     evento_data: evento.data || '',
-    evento_hora: evento.hora || '',
-    assinatura_cliente: body.assinaturaCliente || null,
-    assinatura_cliente_em: body.assinaturaClienteEm || null
+    evento_hora: evento.hora || ''
   };
 }
 

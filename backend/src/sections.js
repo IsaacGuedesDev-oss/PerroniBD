@@ -29,6 +29,11 @@ function V(val) {
 function PEND(text) {
   return text;
 }
+function joinPt(items) {
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  return items.slice(0, -1).join(', ') + ' e ' + items[items.length - 1];
+}
 
 function buildSections(c) {
   var biz = getBusinessInfo();
@@ -67,8 +72,16 @@ function buildSections(c) {
     '4. O repertório musical a ser apresentado no dia do show será escolhido a critério do CONTRATADO, ficando impossibilitado ao CONTRATANTE opor-se à escolha das músicas, podendo somente o CONTRATANTE dar sugestões sobre o repertório, sem vinculação de aceitação pelo CONTRATADO.'
   ]});
 
+  var eq = c.equipamentos || { fornecerSom: true, fornecerIluminacao: true, fornecerDj: true };
+  var eqItems = [];
+  if (eq.fornecerSom) eqItems.push('estrutura de som');
+  if (eq.fornecerIluminacao) eqItems.push('iluminação');
+  if (eq.fornecerDj) eqItems.push('DJ');
+  var eqIntro = eqItems.length
+    ? ('O CONTRATADO fornecerá todo instrumento musical necessário à apresentação, comprometendo-se ao fornecimento de ' + joinPt(eqItems) + '.')
+    : 'O CONTRATADO fornecerá todo instrumento musical necessário à apresentação.';
   sections.push({ heading: 'Dos equipamentos', paragraphs: [
-    '5. O CONTRATADO fornecerá todo instrumento musical necessário à apresentação, comprometendo-se ao fornecimento da estrutura de som, iluminação e DJ. A CONTRATANTE compromete-se a garantir:',
+    '5. ' + eqIntro + ' A CONTRATANTE compromete-se a garantir:',
     { list: [
       'Fornecimento de energia 110v ou 220v, próximo ao local do show;',
       'Local coberto para a realização e devida proteção dos equipamentos em caso de chuva.'

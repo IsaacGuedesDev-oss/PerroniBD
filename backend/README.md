@@ -26,14 +26,25 @@ npm start
 
 Abra `http://localhost:3000`.
 
+## Fluxo de assinatura
+
+A ordem foi invertida em relação ao modelo mais óbvio: **o Badu assina antes do cliente**.
+
+1. Cliente preenche os dados (contratante, endereço, evento) e envia — sem assinar. Status `aguardando_badu`.
+2. Badu revisa, corrige o que precisar (endereço do evento, endereço do cliente, equipamentos, duração, pagamento) e assina. Status vira `aguardando_cliente` — **essa assinatura não finaliza o contrato**.
+3. Cliente consulta pelo código, vê o contrato completo (já com a assinatura do Badu) e assina por último. Só aí o status vira `finalizado`.
+
+Badu pode editar qualquer dado do evento e o endereço do cliente a qualquer momento antes da assinatura final do cliente (útil se o cliente errou algo) — nunca nome, RG, CPF/CNPJ, nacionalidade ou profissão, que são informações pessoais fixadas por quem preencheu.
+
 ## Rotas
 
 | Método | Rota | Acesso | Observação |
 |---|---|---|---|
-| POST | `/api/contratos` | público | cliente cria e assina o contrato |
-| GET | `/api/contratos/:id` | público* | resumo (status, nome, data, cidade) — nunca CPF/RG |
+| POST | `/api/contratos` | público | cliente envia os dados (sem assinar) |
+| GET | `/api/contratos/:id` | público* | resumo enquanto `aguardando_badu`; registro completo (sem CPF/RG escondido) quando `aguardando_cliente`, pro cliente revisar antes de assinar |
 | GET | `/api/contratos` | Badu | lista completa, CPF/RG descriptografados |
-| PATCH | `/api/contratos/:id` | Badu | grava duração/pagamento e assinatura do Badu |
+| PATCH | `/api/contratos/:id` | Badu | corrige evento/endereço/equipamentos, grava duração/pagamento e assina — manda pro estado `aguardando_cliente`. Bloqueado se já `finalizado` |
+| PATCH | `/api/contratos/:id/assinatura-cliente` | público | assinatura final do cliente — só aceita se `aguardando_cliente`; é o que finaliza de verdade |
 | DELETE | `/api/contratos/:id` | Badu | exclui |
 | GET | `/api/contratos/:id/pdf` | Badu, ou público se `finalizado` | PDF gerado no servidor |
 | POST | `/api/auth/login` | público | `{ email, senha }` → cookie de sessão |
@@ -41,7 +52,7 @@ Abra `http://localhost:3000`.
 | GET | `/api/auth/me` | Badu | confirma sessão válida |
 | GET | `/api/config` | público | dados do contratado pro texto do contrato |
 
-`*` com sessão do Badu devolve o registro completo; sem sessão, só o resumo.
+`*` com sessão do Badu sempre devolve o registro completo; sem sessão, só quando `aguardando_cliente` — do contrário, o resumo.
 
 ## Decisões
 
