@@ -270,7 +270,7 @@ input,select,textarea{font-family:inherit;}
   letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);
   margin-bottom:8px;
 }
-.field input,.field select{
+.field input,.field select,.field textarea{
   width:100%;
   background:var(--bg-raised-2);
   border:1px solid var(--line);
@@ -280,8 +280,9 @@ input,select,textarea{font-family:inherit;}
   font-size:15px;
   transition:border-color .15s ease, background .15s ease;
 }
-.field input::placeholder{color:var(--ink-faint);}
-.field input:focus,.field select:focus{
+.field textarea{resize:vertical;font-family:inherit;}
+.field input::placeholder,.field textarea::placeholder{color:var(--ink-faint);}
+.field input:focus,.field select:focus,.field textarea:focus{
   border-color:var(--teal);
   background:var(--bg-raised);
   outline:none;

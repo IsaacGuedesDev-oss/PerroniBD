@@ -51,12 +51,13 @@ function buildContractPDF(c) {
   }
 
   var biz = getBusinessInfo();
+  var artistaNome = c.nomeArtista || biz.nomeArtista;
 
   doc.font('Helvetica-Bold').fontSize(17).fillColor('#14100C');
   doc.text('CONTRATO DE APRESENTAÇÃO — ' + biz.nomeEmpresa.toUpperCase(), MARGIN_X, y, { width: maxW });
   y = doc.y + 8;
   doc.font('Helvetica').fontSize(9.5).fillColor('#6E6254');
-  doc.text('Artista: ' + biz.nomeArtista + '  ·  ' + biz.cidadeUf, MARGIN_X, y, { width: maxW });
+  doc.text('Artista: ' + artistaNome + '  ·  ' + biz.cidadeUf, MARGIN_X, y, { width: maxW });
   y = doc.y + 18;
 
   var sections = buildSections(c);

@@ -93,9 +93,8 @@
         </div>
         <div class="field-row">
           <div class="field">
-            <label>Nacionalidade</label>
+            <label>Nacionalidade (opcional)</label>
             <input type="text" id="f-nacionalidade" placeholder="Ex.: Brasileira" value="Brasileira">
-            <div class="errmsg">Informe a nacionalidade.</div>
           </div>
           <div class="field">
             <label>Profissão</label>
@@ -211,6 +210,20 @@
             <div class="errmsg">Informe o horário.</div>
           </div>
         </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Horário de início do evento (opcional)</label>
+            <input type="time" id="f-horaInicioEvento">
+          </div>
+          <div class="field">
+            <label>Horário de término do evento (opcional)</label>
+            <input type="time" id="f-horaFimEvento">
+          </div>
+        </div>
+        <div class="field">
+          <label>Observações (opcional)</label>
+          <textarea id="f-observacao" rows="3" placeholder="Alguma informação extra sobre o evento?"></textarea>
+        </div>
         <div class="form-nav">
           <button class="btn btn-ghost" data-prev type="button">Voltar</button>
           <button class="btn btn-primary" id="btn-submit-client-data" type="button">Enviar para o Badu revisar</button>
@@ -289,6 +302,12 @@
         <p class="panel-sub" id="admin-sign-sub"></p>
 
         <div class="badu-terms" id="badu-terms-block">
+          <h3 class="terms-heading">Artista — do Objeto do Contrato</h3>
+          <div class="field">
+            <label>Nome do artista que vai se apresentar</label>
+            <input type="text" id="admin-f-nomeartista" placeholder="Ex.: Badu Perrone">
+          </div>
+
           <h3 class="terms-heading">Dados do evento — corrija se precisar</h3>
           <div class="field-row thirds">
             <div class="field">
@@ -327,8 +346,26 @@
               <input type="time" id="admin-f-horaevento">
             </div>
           </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Horário de início do evento (opcional)</label>
+              <input type="time" id="admin-f-horaInicioEvento">
+            </div>
+            <div class="field">
+              <label>Horário de término do evento (opcional)</label>
+              <input type="time" id="admin-f-horaFimEvento">
+            </div>
+          </div>
+          <div class="field">
+            <label>Observações (opcional)</label>
+            <textarea id="admin-f-observacao" rows="3"></textarea>
+          </div>
 
           <h3 class="terms-heading">Endereço do contratante — corrija se precisar</h3>
+          <div class="field">
+            <label>Nacionalidade (opcional)</label>
+            <input type="text" id="admin-f-nacionalidade">
+          </div>
           <div class="field-row thirds">
             <div class="field">
               <label>Rua</label>

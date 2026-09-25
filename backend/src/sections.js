@@ -37,6 +37,7 @@ function joinPt(items) {
 
 function buildSections(c) {
   var biz = getBusinessInfo();
+  var artistaNome = c.nomeArtista || biz.nomeArtista;
   var dLong = dateLong(c.evento.data);
   var dShort = dateShort(c.evento.data);
   var hIni = c.evento.hora;
@@ -46,12 +47,19 @@ function buildSections(c) {
   sections.push({ heading: null, paragraphs: [
     'CONTRATANTE: ' + V(c.cliente.nome) + ', ' + V(c.cliente.nacionalidade) + ', ' + V(c.cliente.profissao) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CPF/CNPJ: ' + V(c.cliente.cpfCnpj) + '. RG: ' + V(c.cliente.rg) + '.',
     'CONTRATADO: ' + biz.nomeEmpresa + ', inscrita no CNPJ sob o nº ' + biz.cnpj + ', representada pelo titular ' + biz.representante + ', domiciliado na ' + biz.endRua + ', nº ' + biz.endNumero + ', bairro ' + biz.endBairro + ', CEP ' + biz.endCep + ', ' + biz.cidadeUf + '.',
-    'As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Apresentação do Artista ' + biz.nomeArtista + ', que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.'
+    'As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Apresentação do Artista ' + V(artistaNome) + ', que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.'
   ]});
 
-  sections.push({ heading: 'Do objeto do contrato', paragraphs: [
-    '1. Este contrato tem como objeto a apresentação do Artista ' + biz.nomeArtista + ', neste ato representado pela empresa ' + biz.nomeEmpresa + ', o CONTRATADO, ao público presente no endereço: ' + V(c.evento.localRua) + ', nº ' + V(c.evento.localNumero) + ', ' + V(c.evento.localBairro) + ', ' + V(c.evento.localCidade) + ', CEP ' + V(c.evento.localCep) + ', no dia ' + V(dLong || null) + ', às ' + V(hIni) + '. Informações fornecidas pelo CONTRATANTE.'
-  ]});
+  var objParagraphs = [
+    '1. Este contrato tem como objeto a apresentação do Artista ' + V(artistaNome) + ', neste ato representado pela empresa ' + biz.nomeEmpresa + ', o CONTRATADO, ao público presente no endereço: ' + V(c.evento.localRua) + ', nº ' + V(c.evento.localNumero) + ', ' + V(c.evento.localBairro) + ', ' + V(c.evento.localCidade) + ', CEP ' + V(c.evento.localCep) + ', no dia ' + V(dLong || null) + ', às ' + V(hIni) + '. Informações fornecidas pelo CONTRATANTE.'
+  ];
+  if (c.evento.horaInicioEvento || c.evento.horaFimEvento) {
+    objParagraphs.push('O evento como um todo (que pode incluir outras atividades além da apresentação) tem início previsto às ' + V(c.evento.horaInicioEvento) + ' e término às ' + V(c.evento.horaFimEvento) + '.');
+  }
+  if (c.evento.observacao) {
+    objParagraphs.push('Observações: ' + c.evento.observacao);
+  }
+  sections.push({ heading: 'Do objeto do contrato', paragraphs: objParagraphs });
 
   var durParagraphs = [];
   if (c.duracaoFinal && c.duracaoFinal.horaFim) {

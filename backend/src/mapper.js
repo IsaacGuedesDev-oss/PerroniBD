@@ -34,8 +34,12 @@ function rowToFullContract(row) {
       localCidade: row.evento_local_cidade || '',
       localCep: row.evento_local_cep || '',
       data: row.evento_data || '',
-      hora: row.evento_hora || ''
+      hora: row.evento_hora || '',
+      horaInicioEvento: row.evento_hora_inicio_evento || '',
+      horaFimEvento: row.evento_hora_fim_evento || '',
+      observacao: row.evento_observacao || ''
     },
+    nomeArtista: row.nome_artista || null,
     duracaoFinal: temDuracao ? {
       horaFim: row.duracao_hora_fim,
       temIntervalo: toBool(row.duracao_tem_intervalo),
@@ -101,7 +105,10 @@ function createBodyToRow(id, createdAt, body) {
     evento_local_cidade: evento.localCidade || '',
     evento_local_cep: evento.localCep || '',
     evento_data: evento.data || '',
-    evento_hora: evento.hora || ''
+    evento_hora: evento.hora || '',
+    evento_hora_inicio_evento: evento.horaInicioEvento || '',
+    evento_hora_fim_evento: evento.horaFimEvento || '',
+    evento_observacao: evento.observacao || ''
   };
 }
 

@@ -48,6 +48,11 @@ const SCHEMA_SQL = `
     evento_local_cep TEXT,
     evento_data TEXT,
     evento_hora TEXT,
+    evento_hora_inicio_evento TEXT,
+    evento_hora_fim_evento TEXT,
+    evento_observacao TEXT,
+
+    nome_artista TEXT,
 
     duracao_hora_fim TEXT,
     duracao_tem_intervalo BOOLEAN,
@@ -73,6 +78,10 @@ const SCHEMA_SQL = `
   ALTER TABLE contratos ADD COLUMN IF NOT EXISTS equip_fornece_som BOOLEAN;
   ALTER TABLE contratos ADD COLUMN IF NOT EXISTS equip_fornece_iluminacao BOOLEAN;
   ALTER TABLE contratos ADD COLUMN IF NOT EXISTS equip_fornece_dj BOOLEAN;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS evento_hora_inicio_evento TEXT;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS evento_hora_fim_evento TEXT;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS evento_observacao TEXT;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS nome_artista TEXT;
 
   CREATE INDEX IF NOT EXISTS idx_sessions_admin ON sessions(admin_id);
   CREATE INDEX IF NOT EXISTS idx_contratos_created ON contratos(created_at);

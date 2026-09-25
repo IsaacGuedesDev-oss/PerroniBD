@@ -8,7 +8,8 @@ const { requireAuth, attachOptionalAuth } = require('../auth');
 
 const router = express.Router();
 
-const REQUIRED_CLIENTE_FIELDS = ['nome', 'nacionalidade', 'profissao', 'rg', 'cpfCnpj', 'endRua', 'endNumero', 'endBairro', 'endCidade', 'endCep'];
+// Nacionalidade é opcional: o cliente pode deixar em branco.
+const REQUIRED_CLIENTE_FIELDS = ['nome', 'profissao', 'rg', 'cpfCnpj', 'endRua', 'endNumero', 'endBairro', 'endCidade', 'endCep'];
 const REQUIRED_EVENTO_FIELDS = ['localRua', 'localNumero', 'localBairro', 'localCidade', 'localCep', 'data', 'hora'];
 
 // Limita criações de contrato para reduzir spam/abuso do endpoint público.
@@ -86,11 +87,11 @@ router.get('/', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// PATCH /api/contratos/:id — autenticado (Badu): revisa/corrige os dados do evento e do
-// endereço do cliente (nunca nome/RG/CPF-CNPJ/nacionalidade/profissão — isso é fixado pelo
-// cliente), define equipamentos/duração/pagamento e assina. Assinar aqui NÃO finaliza o
-// contrato — manda pro cliente assinar por último (ver PATCH /:id/assinatura-cliente).
-// Bloqueado depois que o cliente já assinou (status 'finalizado').
+// PATCH /api/contratos/:id — autenticado (Badu): revisa/corrige os dados do evento,
+// nacionalidade e endereço do cliente (nunca nome/RG/CPF-CNPJ/profissão — isso é fixado
+// pelo cliente), define equipamentos/duração/pagamento/nome do artista e assina. Assinar
+// aqui NÃO finaliza o contrato — manda pro cliente assinar por último (ver PATCH
+// /:id/assinatura-cliente). Bloqueado depois que o cliente já assinou (status 'finalizado').
 router.patch('/:id', requireAuth, async (req, res, next) => {
   try {
     var row = await getContractRow(req.params.id.toUpperCase());
@@ -106,9 +107,10 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     function addSet(col, val) { sets.push(col + ' = $' + n); vals.push(val); n++; }
 
     if (body.cliente) {
-      // Só o endereço do cliente é editável pelo Badu — nome, RG, CPF/CNPJ, nacionalidade
-      // e profissão são informações pessoais que o cliente preencheu e ficam fixas.
+      // Endereço e nacionalidade são editáveis pelo Badu — nome, RG, CPF/CNPJ e profissão
+      // são informações pessoais que o cliente preencheu e ficam fixas.
       var cl = body.cliente;
+      if (cl.nacionalidade !== undefined) addSet('cliente_nacionalidade', cl.nacionalidade || '');
       if (cl.endRua !== undefined) addSet('cliente_end_rua', cl.endRua || '');
       if (cl.endNumero !== undefined) addSet('cliente_end_numero', cl.endNumero || '');
       if (cl.endBairro !== undefined) addSet('cliente_end_bairro', cl.endBairro || '');
@@ -124,6 +126,12 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
       if (ev.localCep !== undefined) addSet('evento_local_cep', ev.localCep || '');
       if (ev.data !== undefined) addSet('evento_data', ev.data || '');
       if (ev.hora !== undefined) addSet('evento_hora', ev.hora || '');
+      if (ev.horaInicioEvento !== undefined) addSet('evento_hora_inicio_evento', ev.horaInicioEvento || '');
+      if (ev.horaFimEvento !== undefined) addSet('evento_hora_fim_evento', ev.horaFimEvento || '');
+      if (ev.observacao !== undefined) addSet('evento_observacao', ev.observacao || '');
+    }
+    if (body.nomeArtista !== undefined) {
+      addSet('nome_artista', body.nomeArtista || null);
     }
     if (body.equipamentos) {
       var eq = body.equipamentos;

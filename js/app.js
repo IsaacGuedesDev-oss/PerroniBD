@@ -247,6 +247,7 @@ function buildSections(c, mode){
     return mode === 'html' ? ('<span class="pending">' + esc(text) + '</span>') : text;
   }
   var biz = BUSINESS_INFO;
+  var artistaNome = c.nomeArtista || biz.nomeArtista;
   var dLong = dateLong(c.evento.data);
   var dShort = dateShort(c.evento.data);
   var hIni = c.evento.hora;
@@ -256,12 +257,19 @@ function buildSections(c, mode){
   sections.push({heading:null, paragraphs:[
     'CONTRATANTE: ' + V(c.cliente.nome) + ', ' + V(c.cliente.nacionalidade) + ', ' + V(c.cliente.profissao) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CPF/CNPJ: ' + V(c.cliente.cpfCnpj) + '. RG: ' + V(c.cliente.rg) + '.',
     'CONTRATADO: ' + V(biz.nomeEmpresa) + ', inscrita no CNPJ sob o nº ' + V(biz.cnpj) + ', representada pelo titular ' + V(biz.representante) + ', domiciliado na ' + V(biz.endRua) + ', nº ' + V(biz.endNumero) + ', bairro ' + V(biz.endBairro) + ', CEP ' + V(biz.endCep) + ', ' + V(biz.cidadeUf) + '.',
-    'As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Apresentação do Artista ' + V(biz.nomeArtista) + ', que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.'
+    'As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Apresentação do Artista ' + V(artistaNome) + ', que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.'
   ]});
 
-  sections.push({heading:'Do objeto do contrato', paragraphs:[
-    '1. Este contrato tem como objeto a apresentação do Artista ' + V(biz.nomeArtista) + ', neste ato representado pela empresa ' + V(biz.nomeEmpresa) + ', o CONTRATADO, ao público presente no endereço: ' + V(c.evento.localRua) + ', nº ' + V(c.evento.localNumero) + ', ' + V(c.evento.localBairro) + ', ' + V(c.evento.localCidade) + ', CEP ' + V(c.evento.localCep) + ', no dia ' + V(dLong || null) + ', às ' + V(hIni) + '. Informações fornecidas pelo CONTRATANTE.'
-  ]});
+  var objParagraphs = [
+    '1. Este contrato tem como objeto a apresentação do Artista ' + V(artistaNome) + ', neste ato representado pela empresa ' + V(biz.nomeEmpresa) + ', o CONTRATADO, ao público presente no endereço: ' + V(c.evento.localRua) + ', nº ' + V(c.evento.localNumero) + ', ' + V(c.evento.localBairro) + ', ' + V(c.evento.localCidade) + ', CEP ' + V(c.evento.localCep) + ', no dia ' + V(dLong || null) + ', às ' + V(hIni) + '. Informações fornecidas pelo CONTRATANTE.'
+  ];
+  if(c.evento.horaInicioEvento || c.evento.horaFimEvento){
+    objParagraphs.push('O evento como um todo (que pode incluir outras atividades além da apresentação) tem início previsto às ' + V(c.evento.horaInicioEvento) + ' e término às ' + V(c.evento.horaFimEvento) + '.');
+  }
+  if(c.evento.observacao){
+    objParagraphs.push('Observações: ' + esc(c.evento.observacao));
+  }
+  sections.push({heading:'Do objeto do contrato', paragraphs: objParagraphs});
 
   var durParagraphs = [];
   if(c.duracaoFinal && c.duracaoFinal.horaFim){
@@ -344,7 +352,8 @@ function buildSections(c, mode){
 
 function renderPaperHTML(c){
   var sections = buildSections(c, 'html');
-  var html = '<div class="doc-title">Contrato de Apresentação — ' + esc(BUSINESS_INFO.nomeEmpresa) + '</div><div class="doc-sub">Artista: ' + esc(BUSINESS_INFO.nomeArtista) + ' · ' + esc(BUSINESS_INFO.cidadeUf) + '</div>';
+  var artistaNome = c.nomeArtista || BUSINESS_INFO.nomeArtista;
+  var html = '<div class="doc-title">Contrato de Apresentação — ' + esc(BUSINESS_INFO.nomeEmpresa) + '</div><div class="doc-sub">Artista: ' + esc(artistaNome) + ' · ' + esc(BUSINESS_INFO.cidadeUf) + '</div>';
   sections.forEach(function(sec){
     if(sec.heading) html += '<h3>' + esc(sec.heading) + '</h3>';
     sec.paragraphs.forEach(function(p){
@@ -363,7 +372,8 @@ function newDraft(){
   return {
     id:null, createdAt:null, status:'rascunho',
     cliente:{nome:'',nacionalidade:'Brasileira',profissao:'',rg:'',cpfCnpj:'',endRua:'',endNumero:'',endBairro:'',endCidade:'',endCep:''},
-    evento:{localRua:'',localNumero:'',localBairro:'',localCidade:'',localCep:'',data:'',hora:'20:00'},
+    evento:{localRua:'',localNumero:'',localBairro:'',localCidade:'',localCep:'',data:'',hora:'20:00',horaInicioEvento:'',horaFimEvento:'',observacao:''},
+    nomeArtista:null,
     duracaoFinal:null,
     equipamentos:{fornecerSom:true, fornecerIluminacao:true, fornecerDj:true},
     pagamento:null,
@@ -376,10 +386,12 @@ var currentStep = 1;
 var baduPad = null;
 var currentAdminContract = null;
 
+// 4º elemento (true) marca campo opcional: continua sendo capturado pro draft,
+// mas não bloqueia o avanço do passo se ficar em branco.
 var STEP_FIELDS = {
-  1:[['f-nome','cliente','nome'],['f-nacionalidade','cliente','nacionalidade'],['f-profissao','cliente','profissao'],['f-rg','cliente','rg'],['f-cpfcnpj','cliente','cpfCnpj']],
+  1:[['f-nome','cliente','nome'],['f-nacionalidade','cliente','nacionalidade',true],['f-profissao','cliente','profissao'],['f-rg','cliente','rg'],['f-cpfcnpj','cliente','cpfCnpj']],
   2:[['f-endRua','cliente','endRua'],['f-endNumero','cliente','endNumero'],['f-endBairro','cliente','endBairro'],['f-endCidade','cliente','endCidade'],['f-endCep','cliente','endCep']],
-  3:[['f-localRua','evento','localRua'],['f-localNumero','evento','localNumero'],['f-localBairro','evento','localBairro'],['f-localCidade','evento','localCidade'],['f-localCep','evento','localCep'],['f-data','evento','data'],['f-hora','evento','hora']]
+  3:[['f-localRua','evento','localRua'],['f-localNumero','evento','localNumero'],['f-localBairro','evento','localBairro'],['f-localCidade','evento','localCidade'],['f-localCep','evento','localCep'],['f-data','evento','data'],['f-hora','evento','hora'],['f-horaInicioEvento','evento','horaInicioEvento',true],['f-horaFimEvento','evento','horaFimEvento',true],['f-observacao','evento','observacao',true]]
 };
 
 function validateStep(step){
@@ -387,11 +399,11 @@ function validateStep(step){
   if(!fields) return true;
   var ok = true;
   fields.forEach(function(f){
-    var id=f[0], group=f[1], key=f[2];
+    var id=f[0], group=f[1], key=f[2], optional=f[3];
     var el = document.getElementById(id);
     var wrap = el.closest('.field');
     var val = el.value.trim();
-    if(!val){ wrap.classList.add('err'); ok=false; }
+    if(!val && !optional){ wrap.classList.add('err'); ok=false; }
     else{ wrap.classList.remove('err'); draft[group][key]=val; }
   });
   return ok;
@@ -418,6 +430,7 @@ function resetFormFields(){
     else if(i.id==='f-hora'){ i.value='20:00'; }
     else{ i.value=''; }
   });
+  document.querySelectorAll('#screen-form textarea').forEach(function(t){ t.value=''; });
   document.querySelectorAll('#screen-form .field').forEach(function(f){ f.classList.remove('err'); });
 }
 
@@ -621,6 +634,7 @@ function toggleIntervaloField(){
 
 function syncAdminFieldsToContract(){
   if(!currentAdminContract) return;
+  currentAdminContract.nomeArtista = document.getElementById('admin-f-nomeartista').value || null;
   currentAdminContract.evento = Object.assign({}, currentAdminContract.evento, {
     localRua: document.getElementById('admin-f-localRua').value,
     localNumero: document.getElementById('admin-f-localNumero').value,
@@ -628,9 +642,13 @@ function syncAdminFieldsToContract(){
     localCidade: document.getElementById('admin-f-localCidade').value,
     localCep: document.getElementById('admin-f-localCep').value,
     data: document.getElementById('admin-f-dataevento').value,
-    hora: document.getElementById('admin-f-horaevento').value
+    hora: document.getElementById('admin-f-horaevento').value,
+    horaInicioEvento: document.getElementById('admin-f-horaInicioEvento').value,
+    horaFimEvento: document.getElementById('admin-f-horaFimEvento').value,
+    observacao: document.getElementById('admin-f-observacao').value
   });
   currentAdminContract.cliente = Object.assign({}, currentAdminContract.cliente, {
+    nacionalidade: document.getElementById('admin-f-nacionalidade').value,
     endRua: document.getElementById('admin-f-endRua').value,
     endNumero: document.getElementById('admin-f-endNumero').value,
     endBairro: document.getElementById('admin-f-endBairro').value,
@@ -699,6 +717,7 @@ async function openAdminSign(id){
     termsBlock.style.display='block';
     signArea.style.display='block';
     already.style.display='none';
+    document.getElementById('admin-f-nomeartista').value = c.nomeArtista || BUSINESS_INFO.nomeArtista || '';
     document.getElementById('admin-f-localRua').value = c.evento.localRua || '';
     document.getElementById('admin-f-localNumero').value = c.evento.localNumero || '';
     document.getElementById('admin-f-localBairro').value = c.evento.localBairro || '';
@@ -706,6 +725,10 @@ async function openAdminSign(id){
     document.getElementById('admin-f-localCep').value = c.evento.localCep || '';
     document.getElementById('admin-f-dataevento').value = c.evento.data || '';
     document.getElementById('admin-f-horaevento').value = c.evento.hora || '';
+    document.getElementById('admin-f-horaInicioEvento').value = c.evento.horaInicioEvento || '';
+    document.getElementById('admin-f-horaFimEvento').value = c.evento.horaFimEvento || '';
+    document.getElementById('admin-f-observacao').value = c.evento.observacao || '';
+    document.getElementById('admin-f-nacionalidade').value = c.cliente.nacionalidade || '';
     document.getElementById('admin-f-endRua').value = c.cliente.endRua || '';
     document.getElementById('admin-f-endNumero').value = c.cliente.endNumero || '';
     document.getElementById('admin-f-endBairro').value = c.cliente.endBairro || '';
@@ -890,9 +913,10 @@ document.getElementById('btn-submit-client-data').addEventListener('click', asyn
 });
 
 [
+  'admin-f-nomeartista',
   'admin-f-localRua','admin-f-localNumero','admin-f-localBairro','admin-f-localCidade','admin-f-localCep',
-  'admin-f-dataevento','admin-f-horaevento',
-  'admin-f-endRua','admin-f-endNumero','admin-f-endBairro','admin-f-endCidade','admin-f-endCep',
+  'admin-f-dataevento','admin-f-horaevento','admin-f-horaInicioEvento','admin-f-horaFimEvento','admin-f-observacao',
+  'admin-f-nacionalidade','admin-f-endRua','admin-f-endNumero','admin-f-endBairro','admin-f-endCidade','admin-f-endCep',
   'admin-f-horafim','admin-f-horaextra','admin-f-valortotal','admin-f-percentualentrada','admin-f-intervalomin'
 ].forEach(function(id){
   var el = document.getElementById(id);
@@ -923,7 +947,9 @@ document.getElementById('btn-submit-badu').addEventListener('click', async funct
   var btn = this;
   btn.disabled = true; btn.textContent = 'Salvando…';
   var patch = {
+    nomeArtista: currentAdminContract.nomeArtista,
     cliente: {
+      nacionalidade: currentAdminContract.cliente.nacionalidade,
       endRua: currentAdminContract.cliente.endRua,
       endNumero: currentAdminContract.cliente.endNumero,
       endBairro: currentAdminContract.cliente.endBairro,
