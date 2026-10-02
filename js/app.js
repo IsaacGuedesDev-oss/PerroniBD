@@ -94,17 +94,23 @@ function emptyLookup(msg){
 
 /* ================= CONFIRM MODAL ================= */
 var confirmCallback = null;
+var confirmCancelCallback = null;
 function showConfirm(msg, onConfirm, opts){
   opts = opts || {};
   document.getElementById('confirm-modal-title').textContent = opts.title || 'Confirmar exclusão';
   document.getElementById('confirm-modal-msg').textContent = msg;
-  document.getElementById('confirm-modal-ok').textContent = opts.okLabel || 'Excluir';
+  var okBtn = document.getElementById('confirm-modal-ok');
+  okBtn.textContent = opts.okLabel || 'Excluir';
+  okBtn.className = 'btn btn-sm ' + (opts.okClass || 'btn-danger');
+  document.getElementById('confirm-modal-cancel').textContent = opts.cancelLabel || 'Cancelar';
   confirmCallback = onConfirm;
+  confirmCancelCallback = opts.onCancel || null;
   document.getElementById('confirm-modal').classList.add('show');
 }
 function hideConfirm(){
   document.getElementById('confirm-modal').classList.remove('show');
   confirmCallback = null;
+  confirmCancelCallback = null;
 }
 
 /* ================= API ================= */
@@ -431,6 +437,52 @@ function validateStep(step){
   return ok;
 }
 
+/* ================= RASCUNHO (localStorage) ================= */
+// Salva o progresso do formulário no navegador, pra quem fechar a aba no meio poder
+// continuar depois — sem precisar de login nem de ir pro servidor.
+var DRAFT_STORAGE_KEY = 'baduContratoRascunho';
+var DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+var ALL_CLIENT_FIELDS = [].concat(STEP_FIELDS[1], STEP_FIELDS[2], STEP_FIELDS[3]);
+
+function snapshotDraftFromDOM(){
+  ALL_CLIENT_FIELDS.forEach(function(f){
+    var el = document.getElementById(f[0]);
+    if(el) draft[f[1]][f[2]] = el.value;
+  });
+}
+
+function saveDraftToStorage(){
+  try{
+    snapshotDraftFromDOM();
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({draft:draft, step:currentStep, savedAt:new Date().toISOString()}));
+  }catch(e){ /* localStorage pode falhar (modo privado, cota cheia etc.) — não é crítico */ }
+}
+
+function loadDraftFromStorage(){
+  try{
+    var raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if(!raw) return null;
+    var parsed = JSON.parse(raw);
+    if(!parsed || !parsed.draft) return null;
+    var age = Date.now() - new Date(parsed.savedAt || 0).getTime();
+    if(isNaN(age) || age > DRAFT_MAX_AGE_MS) { clearDraftStorage(); return null; }
+    return parsed;
+  }catch(e){ return null; }
+}
+
+function clearDraftStorage(){
+  try{ localStorage.removeItem(DRAFT_STORAGE_KEY); }catch(e){}
+}
+
+function populateFormFromDraft(){
+  ALL_CLIENT_FIELDS.forEach(function(f){
+    var el = document.getElementById(f[0]);
+    var val = draft[f[1]][f[2]];
+    if(el && val !== undefined && val !== null) el.value = val;
+  });
+  updatePessoaTypeFields();
+}
+
 function goStep(step){
   document.querySelectorAll('.form-step').forEach(function(p){
     p.style.display = (Number(p.dataset.step)===step) ? 'block' : 'none';
@@ -577,6 +629,49 @@ async function doLookup(codeRaw){
   var c = await getContract(code);
   if(!c){ target.innerHTML = emptyLookup('Nenhum contrato encontrado com o código ' + esc(code) + '.'); return; }
   renderLookupResult(c);
+}
+
+// Arquivo de contratos: quem perdeu o código busca pelo e-mail que usou no formulário
+// e vê todos os contratos ligados a ele (resumo público, igual à consulta por código).
+async function doLookupByEmail(emailRaw){
+  var email = (emailRaw||'').trim();
+  var target = document.getElementById('lookup-result');
+  showScreen('screen-lookup');
+  target.innerHTML = '<div class="loading-row"><span class="spinner"></span> Buscando seus contratos…</div>';
+  if(!email){ target.innerHTML = emptyLookup('Digite um e-mail para buscar.'); return; }
+  var r = await apiJson('/contratos/por-email?email='+encodeURIComponent(email));
+  if(!r.ok || !Array.isArray(r.data) || !r.data.length){
+    target.innerHTML = emptyLookup('Nenhum contrato encontrado com o e-mail ' + esc(email) + '.');
+    return;
+  }
+  renderLookupList(r.data);
+}
+
+function renderLookupList(list){
+  var target = document.getElementById('lookup-result');
+  var rows = list.map(function(c){
+    var badgeClass = c.status==='finalizado' ? 'done' : (c.status==='aguardando_cliente' ? 'pending-client' : 'wait');
+    var badgeLabel = c.status==='finalizado' ? 'Finalizado' : (c.status==='aguardando_cliente' ? 'Aguardando sua assinatura' : 'Aguardando o Badu');
+    return '<div class="contract-row">' +
+      '<div class="cinfo">' +
+        '<div class="cname">' + esc(c.cliente.nome||'—') + '</div>' +
+        '<div class="cmeta">' + esc(c.id) + ' · show em ' + esc(dateShort(c.evento.data)) + '</div>' +
+      '</div>' +
+      '<div class="cactions">' +
+        '<span class="badge ' + badgeClass + '">' + badgeLabel + '</span>' +
+        '<button class="btn btn-sm btn-ghost" data-open-code="' + esc(c.id) + '" type="button">Ver</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  target.innerHTML =
+    '<div class="panel">' +
+      '<h2 style="font-size:20px;">Seus contratos</h2>' +
+      '<p class="panel-sub">' + list.length + ' contrato(s) encontrado(s) com esse e-mail.</p>' +
+      rows +
+    '</div>';
+  target.querySelectorAll('[data-open-code]').forEach(function(btn){
+    btn.addEventListener('click', function(){ doLookup(btn.getAttribute('data-open-code')); });
+  });
 }
 
 /* ================= ADMIN ================= */
@@ -891,7 +986,11 @@ document.getElementById('btn-admin-delete').addEventListener('click', function()
     else{ toast('Não foi possível excluir o contrato.'); }
   });
 });
-document.getElementById('confirm-modal-cancel').addEventListener('click', hideConfirm);
+document.getElementById('confirm-modal-cancel').addEventListener('click', function(){
+  var cb = confirmCancelCallback;
+  hideConfirm();
+  if(cb) cb();
+});
 document.getElementById('confirm-modal-ok').addEventListener('click', function(){
   var cb = confirmCallback;
   hideConfirm();
@@ -901,11 +1000,31 @@ document.getElementById('confirm-modal').addEventListener('click', function(e){
   if(e.target === this) hideConfirm();
 });
 
-document.getElementById('btn-start').addEventListener('click', function(){
+function startFreshForm(){
+  clearDraftStorage();
   draft = newDraft();
   resetFormFields();
   goStep(1);
   showScreen('screen-form');
+}
+
+document.getElementById('btn-start').addEventListener('click', function(){
+  var saved = loadDraftFromStorage();
+  if(saved){
+    showConfirm(
+      'Encontramos um formulário que você começou antes e não terminou. Quer continuar de onde parou ou começar do zero?',
+      function(){
+        draft = saved.draft;
+        resetFormFields();
+        populateFormFromDraft();
+        goStep(saved.step || 1);
+        showScreen('screen-form');
+      },
+      {title:'Continuar rascunho?', okLabel:'Continuar de onde parei', okClass:'btn-primary', cancelLabel:'Começar do zero', onCancel:startFreshForm}
+    );
+    return;
+  }
+  startFreshForm();
 });
 document.getElementById('btn-form-cancel').addEventListener('click', function(){ showScreen('screen-landing'); });
 
@@ -923,6 +1042,9 @@ document.getElementById('f-rg').addEventListener('input', function(e){ e.target.
 document.getElementById('f-endCep').addEventListener('input', function(e){ e.target.value = maskCEP(e.target.value); });
 document.getElementById('f-localCep').addEventListener('input', function(e){ e.target.value = maskCEP(e.target.value); });
 
+// Salva o rascunho a cada letra digitada em qualquer campo do formulário do cliente.
+document.getElementById('screen-form').addEventListener('input', saveDraftToStorage);
+
 document.getElementById('btn-clear-sign-badu').addEventListener('click', function(){ if(baduPad) baduPad.clear(); });
 
 document.getElementById('btn-submit-client-data').addEventListener('click', async function(){
@@ -932,6 +1054,7 @@ document.getElementById('btn-submit-client-data').addEventListener('click', asyn
   var saved = await createContract(draft);
   btn.disabled = false; btn.textContent = 'Enviar para o Badu revisar';
   if(!saved){ toast('Não foi possível salvar. Tente novamente.'); return; }
+  clearDraftStorage();
   draft = saved;
   showVoucher(draft);
   showScreen('screen-confirm');
@@ -1002,6 +1125,13 @@ document.getElementById('btn-confirm-home').addEventListener('click', function()
 document.getElementById('btn-lookup-home').addEventListener('click', function(){ showScreen('screen-landing'); });
 document.getElementById('btn-lookup').addEventListener('click', function(){ doLookup(document.getElementById('input-lookup-code').value); });
 document.getElementById('input-lookup-code').addEventListener('keydown', function(e){ if(e.key==='Enter') doLookup(e.target.value); });
+document.getElementById('btn-toggle-lookup-email').addEventListener('click', function(){
+  var row = document.getElementById('lookup-email-row');
+  row.style.display = row.style.display==='none' ? 'flex' : 'none';
+  if(row.style.display==='flex') document.getElementById('input-lookup-email').focus();
+});
+document.getElementById('btn-lookup-email').addEventListener('click', function(){ doLookupByEmail(document.getElementById('input-lookup-email').value); });
+document.getElementById('input-lookup-email').addEventListener('keydown', function(e){ if(e.key==='Enter') doLookupByEmail(e.target.value); });
 
 (function initDefaults(){
   var todayISO = new Date().toISOString().slice(0,10);

@@ -32,6 +32,15 @@ const signLimiter = rateLimit({
   message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }
 });
 
+// Mesma ideia, pra busca pública por e-mail (evita varredura de e-mails em sequência).
+const lookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' }
+});
+
 async function getContractRow(id) {
   const { rows } = await pool.query('SELECT * FROM contratos WHERE id = $1', [id]);
   return rows[0];
@@ -68,6 +77,21 @@ router.post('/', createLimiter, async (req, res, next) => {
 
     var saved = await getContractRow(id);
     res.status(201).json(rowToFullContract(saved));
+  } catch (e) { next(e); }
+});
+
+// GET /api/contratos/por-email?email=... — público: lista (resumo, sem CPF/RG/pagamento)
+// os contratos ligados a um e-mail, pra quem perdeu o código conseguir achar de novo.
+// Registrada antes de GET /:id de propósito (senão "por-email" seria lido como um id).
+router.get('/por-email', lookupLimiter, async (req, res, next) => {
+  try {
+    var email = String(req.query.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ error: 'Informe um e-mail.' });
+    var { rows } = await pool.query(
+      'SELECT * FROM contratos WHERE LOWER(cliente_email) = $1 ORDER BY created_at DESC',
+      [email]
+    );
+    res.json(rows.map(rowToPublicSummary));
   } catch (e) { next(e); }
 });
 
