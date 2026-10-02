@@ -34,6 +34,10 @@ function joinPt(items) {
   if (items.length === 1) return items[0];
   return items.slice(0, -1).join(', ') + ' e ' + items[items.length - 1];
 }
+// Mais de 11 dígitos = CNPJ (pessoa jurídica); 11 ou menos = CPF (pessoa física).
+function isPessoaJuridica(cpfCnpj) {
+  return String(cpfCnpj || '').replace(/\D/g, '').length > 11;
+}
 
 function buildSections(c) {
   var biz = getBusinessInfo();
@@ -41,11 +45,19 @@ function buildSections(c) {
   var dLong = dateLong(c.evento.data);
   var dShort = dateShort(c.evento.data);
   var hIni = c.evento.hora;
+  var pj = isPessoaJuridica(c.cliente.cpfCnpj);
 
   var sections = [];
 
+  // Pessoa jurídica não tem nacionalidade/profissão/RG — a cláusula nem menciona isso
+  // nesse caso, só razão social, endereço e CNPJ.
+  var contratanteLine = pj
+    ? 'CONTRATANTE: ' + V(c.cliente.nome) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CNPJ: ' + V(c.cliente.cpfCnpj) + '.'
+    : 'CONTRATANTE: ' + V(c.cliente.nome) + ', ' + V(c.cliente.nacionalidade) + ', ' + V(c.cliente.profissao) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CPF: ' + V(c.cliente.cpfCnpj) + '. RG: ' + V(c.cliente.rg) + '.';
+  if (c.cliente.email) contratanteLine += ' E-mail: ' + c.cliente.email + '.';
+
   sections.push({ heading: null, paragraphs: [
-    'CONTRATANTE: ' + V(c.cliente.nome) + ', ' + V(c.cliente.nacionalidade) + ', ' + V(c.cliente.profissao) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CPF/CNPJ: ' + V(c.cliente.cpfCnpj) + '. RG: ' + V(c.cliente.rg) + '.',
+    contratanteLine,
     'CONTRATADO: ' + biz.nomeEmpresa + ', inscrita no CNPJ sob o nº ' + biz.cnpj + ', representada pelo titular ' + biz.representante + ', domiciliado na ' + biz.endRua + ', nº ' + biz.endNumero + ', bairro ' + biz.endBairro + ', CEP ' + biz.endCep + ', ' + biz.cidadeUf + '.',
     'As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Apresentação do Artista ' + V(artistaNome) + ', que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.'
   ]});

@@ -41,6 +41,10 @@ function joinPt(items){
   if(items.length===1) return items[0];
   return items.slice(0,-1).join(', ') + ' e ' + items[items.length-1];
 }
+// Mais de 11 dígitos = CNPJ (pessoa jurídica); 11 ou menos = CPF (pessoa física).
+function isPessoaJuridica(cpfCnpj){
+  return String(cpfCnpj||'').replace(/\D/g,'').length > 11;
+}
 function maskCEP(raw){
   var v = raw.replace(/\D/g,'').slice(0,8);
   if(v.length>5) return v.slice(0,5)+'-'+v.slice(5);
@@ -254,8 +258,16 @@ function buildSections(c, mode){
 
   var sections = [];
 
+  // Pessoa jurídica não tem nacionalidade/profissão/RG — a cláusula nem menciona isso
+  // nesse caso, só razão social, endereço e CNPJ.
+  var pj = isPessoaJuridica(c.cliente.cpfCnpj);
+  var contratanteLine = pj
+    ? 'CONTRATANTE: ' + V(c.cliente.nome) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CNPJ: ' + V(c.cliente.cpfCnpj) + '.'
+    : 'CONTRATANTE: ' + V(c.cliente.nome) + ', ' + V(c.cliente.nacionalidade) + ', ' + V(c.cliente.profissao) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CPF: ' + V(c.cliente.cpfCnpj) + '. RG: ' + V(c.cliente.rg) + '.';
+  if(c.cliente.email) contratanteLine += ' E-mail: ' + V(c.cliente.email) + '.';
+
   sections.push({heading:null, paragraphs:[
-    'CONTRATANTE: ' + V(c.cliente.nome) + ', ' + V(c.cliente.nacionalidade) + ', ' + V(c.cliente.profissao) + ', com sede na ' + V(c.cliente.endRua) + ', nº ' + V(c.cliente.endNumero) + ', ' + V(c.cliente.endBairro) + ', ' + V(c.cliente.endCidade) + ', CEP ' + V(c.cliente.endCep) + '. CPF/CNPJ: ' + V(c.cliente.cpfCnpj) + '. RG: ' + V(c.cliente.rg) + '.',
+    contratanteLine,
     'CONTRATADO: ' + V(biz.nomeEmpresa) + ', inscrita no CNPJ sob o nº ' + V(biz.cnpj) + ', representada pelo titular ' + V(biz.representante) + ', domiciliado na ' + V(biz.endRua) + ', nº ' + V(biz.endNumero) + ', bairro ' + V(biz.endBairro) + ', CEP ' + V(biz.endCep) + ', ' + V(biz.cidadeUf) + '.',
     'As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Apresentação do Artista ' + V(artistaNome) + ', que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.'
   ]});
@@ -371,7 +383,7 @@ function renderPaperHTML(c){
 function newDraft(){
   return {
     id:null, createdAt:null, status:'rascunho',
-    cliente:{nome:'',nacionalidade:'Brasileira',profissao:'',rg:'',cpfCnpj:'',endRua:'',endNumero:'',endBairro:'',endCidade:'',endCep:''},
+    cliente:{nome:'',nacionalidade:'Brasileira',profissao:'',rg:'',cpfCnpj:'',email:'',endRua:'',endNumero:'',endBairro:'',endCidade:'',endCep:''},
     evento:{localRua:'',localNumero:'',localBairro:'',localCidade:'',localCep:'',data:'',hora:'20:00',horaInicioEvento:'',horaFimEvento:'',observacao:''},
     nomeArtista:null,
     duracaoFinal:null,
@@ -387,22 +399,32 @@ var baduPad = null;
 var currentAdminContract = null;
 
 // 4º elemento (true) marca campo opcional: continua sendo capturado pro draft,
-// mas não bloqueia o avanço do passo se ficar em branco.
+// mas não bloqueia o avanço do passo se ficar em branco. Nacionalidade/profissão/RG
+// são tratados à parte em validateStep: só obrigatórios pra pessoa física.
+var PF_ONLY_FIELDS = ['nacionalidade','profissao','rg'];
 var STEP_FIELDS = {
-  1:[['f-nome','cliente','nome'],['f-nacionalidade','cliente','nacionalidade',true],['f-profissao','cliente','profissao'],['f-rg','cliente','rg'],['f-cpfcnpj','cliente','cpfCnpj']],
+  1:[['f-nome','cliente','nome'],['f-cpfcnpj','cliente','cpfCnpj'],['f-nacionalidade','cliente','nacionalidade'],['f-profissao','cliente','profissao'],['f-rg','cliente','rg'],['f-email','cliente','email']],
   2:[['f-endRua','cliente','endRua'],['f-endNumero','cliente','endNumero'],['f-endBairro','cliente','endBairro'],['f-endCidade','cliente','endCidade'],['f-endCep','cliente','endCep']],
   3:[['f-localRua','evento','localRua'],['f-localNumero','evento','localNumero'],['f-localBairro','evento','localBairro'],['f-localCidade','evento','localCidade'],['f-localCep','evento','localCep'],['f-data','evento','data'],['f-hora','evento','hora'],['f-horaInicioEvento','evento','horaInicioEvento',true],['f-horaFimEvento','evento','horaFimEvento',true],['f-observacao','evento','observacao',true]]
 };
+
+function updatePessoaTypeFields(){
+  var pj = isPessoaJuridica(document.getElementById('f-cpfcnpj').value);
+  document.getElementById('pf-only-fields').style.display = pj ? 'none' : 'block';
+}
 
 function validateStep(step){
   var fields = STEP_FIELDS[step];
   if(!fields) return true;
   var ok = true;
+  var pj = isPessoaJuridica(document.getElementById('f-cpfcnpj').value);
   fields.forEach(function(f){
-    var id=f[0], group=f[1], key=f[2], optional=f[3];
+    var id=f[0], group=f[1], key=f[2], staticOptional=f[3];
+    var isPfOnly = group==='cliente' && PF_ONLY_FIELDS.indexOf(key)!==-1;
+    var optional = isPfOnly ? pj : staticOptional;
     var el = document.getElementById(id);
     var wrap = el.closest('.field');
-    var val = el.value.trim();
+    var val = (isPfOnly && pj) ? '' : el.value.trim();
     if(!val && !optional){ wrap.classList.add('err'); ok=false; }
     else{ wrap.classList.remove('err'); draft[group][key]=val; }
   });
@@ -432,6 +454,7 @@ function resetFormFields(){
   });
   document.querySelectorAll('#screen-form textarea').forEach(function(t){ t.value=''; });
   document.querySelectorAll('#screen-form .field').forEach(function(f){ f.classList.remove('err'); });
+  updatePessoaTypeFields();
 }
 
 /* ================= VOUCHER / LOOKUP RENDER ================= */
@@ -649,6 +672,7 @@ function syncAdminFieldsToContract(){
   });
   currentAdminContract.cliente = Object.assign({}, currentAdminContract.cliente, {
     nacionalidade: document.getElementById('admin-f-nacionalidade').value,
+    email: document.getElementById('admin-f-email').value,
     endRua: document.getElementById('admin-f-endRua').value,
     endNumero: document.getElementById('admin-f-endNumero').value,
     endBairro: document.getElementById('admin-f-endBairro').value,
@@ -729,6 +753,7 @@ async function openAdminSign(id){
     document.getElementById('admin-f-horaFimEvento').value = c.evento.horaFimEvento || '';
     document.getElementById('admin-f-observacao').value = c.evento.observacao || '';
     document.getElementById('admin-f-nacionalidade').value = c.cliente.nacionalidade || '';
+    document.getElementById('admin-f-email').value = c.cliente.email || '';
     document.getElementById('admin-f-endRua').value = c.cliente.endRua || '';
     document.getElementById('admin-f-endNumero').value = c.cliente.endNumero || '';
     document.getElementById('admin-f-endBairro').value = c.cliente.endBairro || '';
@@ -893,7 +918,7 @@ document.querySelectorAll('#screen-form [data-prev]').forEach(function(btn){
   btn.addEventListener('click', function(){ goStep(currentStep-1); });
 });
 
-document.getElementById('f-cpfcnpj').addEventListener('input', function(e){ e.target.value = maskCPFCNPJ(e.target.value); });
+document.getElementById('f-cpfcnpj').addEventListener('input', function(e){ e.target.value = maskCPFCNPJ(e.target.value); updatePessoaTypeFields(); });
 document.getElementById('f-rg').addEventListener('input', function(e){ e.target.value = maskRG(e.target.value); });
 document.getElementById('f-endCep').addEventListener('input', function(e){ e.target.value = maskCEP(e.target.value); });
 document.getElementById('f-localCep').addEventListener('input', function(e){ e.target.value = maskCEP(e.target.value); });
@@ -916,7 +941,7 @@ document.getElementById('btn-submit-client-data').addEventListener('click', asyn
   'admin-f-nomeartista',
   'admin-f-localRua','admin-f-localNumero','admin-f-localBairro','admin-f-localCidade','admin-f-localCep',
   'admin-f-dataevento','admin-f-horaevento','admin-f-horaInicioEvento','admin-f-horaFimEvento','admin-f-observacao',
-  'admin-f-nacionalidade','admin-f-endRua','admin-f-endNumero','admin-f-endBairro','admin-f-endCidade','admin-f-endCep',
+  'admin-f-nacionalidade','admin-f-email','admin-f-endRua','admin-f-endNumero','admin-f-endBairro','admin-f-endCidade','admin-f-endCep',
   'admin-f-horafim','admin-f-horaextra','admin-f-valortotal','admin-f-percentualentrada','admin-f-intervalomin'
 ].forEach(function(id){
   var el = document.getElementById(id);
@@ -950,6 +975,7 @@ document.getElementById('btn-submit-badu').addEventListener('click', async funct
     nomeArtista: currentAdminContract.nomeArtista,
     cliente: {
       nacionalidade: currentAdminContract.cliente.nacionalidade,
+      email: currentAdminContract.cliente.email,
       endRua: currentAdminContract.cliente.endRua,
       endNumero: currentAdminContract.cliente.endNumero,
       endBairro: currentAdminContract.cliente.endBairro,

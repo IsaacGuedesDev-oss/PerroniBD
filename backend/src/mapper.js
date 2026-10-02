@@ -6,6 +6,11 @@ function toBool(v) {
   return v === 1 || v === true;
 }
 
+// Mais de 11 dígitos = CNPJ (pessoa jurídica); 11 ou menos = CPF (pessoa física).
+function isPessoaJuridica(cpfCnpj) {
+  return String(cpfCnpj || '').replace(/\D/g, '').length > 11;
+}
+
 // Linha do banco -> objeto completo (uso interno / painel do Badu autenticado).
 function rowToFullContract(row) {
   if (!row) return null;
@@ -21,6 +26,7 @@ function rowToFullContract(row) {
       profissao: row.cliente_profissao || '',
       rg: decrypt(row.cliente_rg) || '',
       cpfCnpj: decrypt(row.cliente_cpf_cnpj) || '',
+      email: row.cliente_email || '',
       endRua: row.cliente_end_rua || '',
       endNumero: row.cliente_end_numero || '',
       endBairro: row.cliente_end_bairro || '',
@@ -85,15 +91,19 @@ function rowToPublicSummary(row) {
 function createBodyToRow(id, createdAt, body) {
   var cliente = body.cliente || {};
   var evento = body.evento || {};
+  // Pessoa jurídica não tem nacionalidade/profissão/RG — ignora o que vier nesses
+  // campos nesse caso, independente do que o front mandar.
+  var pj = isPessoaJuridica(cliente.cpfCnpj);
   return {
     id: id,
     status: 'aguardando_badu',
     created_at: createdAt,
     cliente_nome: cliente.nome || '',
-    cliente_nacionalidade: cliente.nacionalidade || '',
-    cliente_profissao: cliente.profissao || '',
-    cliente_rg: encrypt(cliente.rg || ''),
+    cliente_nacionalidade: pj ? '' : (cliente.nacionalidade || ''),
+    cliente_profissao: pj ? '' : (cliente.profissao || ''),
+    cliente_rg: pj ? null : encrypt(cliente.rg || ''),
     cliente_cpf_cnpj: encrypt(cliente.cpfCnpj || ''),
+    cliente_email: cliente.email || '',
     cliente_end_rua: cliente.endRua || '',
     cliente_end_numero: cliente.endNumero || '',
     cliente_end_bairro: cliente.endBairro || '',
@@ -112,4 +122,4 @@ function createBodyToRow(id, createdAt, body) {
   };
 }
 
-module.exports = { rowToFullContract, rowToPublicSummary, createBodyToRow };
+module.exports = { rowToFullContract, rowToPublicSummary, createBodyToRow, isPessoaJuridica };

@@ -2,14 +2,16 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { genId } = require('../idgen');
-const { rowToFullContract, rowToPublicSummary, createBodyToRow } = require('../mapper');
+const { rowToFullContract, rowToPublicSummary, createBodyToRow, isPessoaJuridica } = require('../mapper');
 const { buildContractPDF } = require('../pdf');
 const { requireAuth, attachOptionalAuth } = require('../auth');
 
 const router = express.Router();
 
-// Nacionalidade é opcional: o cliente pode deixar em branco.
-const REQUIRED_CLIENTE_FIELDS = ['nome', 'profissao', 'rg', 'cpfCnpj', 'endRua', 'endNumero', 'endBairro', 'endCidade', 'endCep'];
+// Válidos pra qualquer contratante. Nacionalidade/profissão/RG só fazem sentido pra
+// pessoa física — exigidos à parte, condicionados ao CPF/CNPJ informado.
+const REQUIRED_CLIENTE_FIELDS = ['nome', 'cpfCnpj', 'email', 'endRua', 'endNumero', 'endBairro', 'endCidade', 'endCep'];
+const REQUIRED_CLIENTE_FIELDS_PF = ['nacionalidade', 'profissao', 'rg'];
 const REQUIRED_EVENTO_FIELDS = ['localRua', 'localNumero', 'localBairro', 'localCidade', 'localCep', 'data', 'hora'];
 
 // Limita criações de contrato para reduzir spam/abuso do endpoint público.
@@ -45,6 +47,9 @@ router.post('/', createLimiter, async (req, res, next) => {
 
     var missing = [];
     REQUIRED_CLIENTE_FIELDS.forEach(function (f) { if (!String(cliente[f] || '').trim()) missing.push('cliente.' + f); });
+    if (!isPessoaJuridica(cliente.cpfCnpj)) {
+      REQUIRED_CLIENTE_FIELDS_PF.forEach(function (f) { if (!String(cliente[f] || '').trim()) missing.push('cliente.' + f); });
+    }
     REQUIRED_EVENTO_FIELDS.forEach(function (f) { if (!String(evento[f] || '').trim()) missing.push('evento.' + f); });
 
     if (missing.length) {
@@ -107,10 +112,11 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     function addSet(col, val) { sets.push(col + ' = $' + n); vals.push(val); n++; }
 
     if (body.cliente) {
-      // Endereço e nacionalidade são editáveis pelo Badu — nome, RG, CPF/CNPJ e profissão
-      // são informações pessoais que o cliente preencheu e ficam fixas.
+      // Endereço, e-mail e nacionalidade são editáveis pelo Badu — nome, RG, CPF/CNPJ e
+      // profissão são informações pessoais que o cliente preencheu e ficam fixas.
       var cl = body.cliente;
       if (cl.nacionalidade !== undefined) addSet('cliente_nacionalidade', cl.nacionalidade || '');
+      if (cl.email !== undefined) addSet('cliente_email', cl.email || '');
       if (cl.endRua !== undefined) addSet('cliente_end_rua', cl.endRua || '');
       if (cl.endNumero !== undefined) addSet('cliente_end_numero', cl.endNumero || '');
       if (cl.endBairro !== undefined) addSet('cliente_end_bairro', cl.endBairro || '');

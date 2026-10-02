@@ -34,6 +34,7 @@ const SCHEMA_SQL = `
     cliente_profissao TEXT,
     cliente_rg TEXT,
     cliente_cpf_cnpj TEXT,
+    cliente_email TEXT,
 
     cliente_end_rua TEXT,
     cliente_end_numero TEXT,
@@ -82,6 +83,7 @@ const SCHEMA_SQL = `
   ALTER TABLE contratos ADD COLUMN IF NOT EXISTS evento_hora_fim_evento TEXT;
   ALTER TABLE contratos ADD COLUMN IF NOT EXISTS evento_observacao TEXT;
   ALTER TABLE contratos ADD COLUMN IF NOT EXISTS nome_artista TEXT;
+  ALTER TABLE contratos ADD COLUMN IF NOT EXISTS cliente_email TEXT;
 
   CREATE INDEX IF NOT EXISTS idx_sessions_admin ON sessions(admin_id);
   CREATE INDEX IF NOT EXISTS idx_contratos_created ON contratos(created_at);

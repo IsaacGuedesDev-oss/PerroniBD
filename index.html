@@ -91,28 +91,33 @@
           <input type="text" id="f-nome" placeholder="Ex.: Aline Cristina da Silva Barata Diniz">
           <div class="errmsg">Informe o nome ou razão social.</div>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Nacionalidade (opcional)</label>
-            <input type="text" id="f-nacionalidade" placeholder="Ex.: Brasileira" value="Brasileira">
-          </div>
-          <div class="field">
-            <label>Profissão</label>
-            <input type="text" id="f-profissao" placeholder="Ex.: Economista">
-            <div class="errmsg">Informe a profissão.</div>
-          </div>
+        <div class="field">
+          <label>CPF ou CNPJ</label>
+          <input type="text" id="f-cpfcnpj" placeholder="000.000.000-00" maxlength="18" inputmode="numeric">
+          <div class="errmsg">Informe um CPF ou CNPJ válido.</div>
         </div>
-        <div class="field-row">
+        <div id="pf-only-fields">
+          <div class="field-row">
+            <div class="field">
+              <label>Nacionalidade (opcional)</label>
+              <input type="text" id="f-nacionalidade" placeholder="Ex.: Brasileira" value="Brasileira">
+            </div>
+            <div class="field">
+              <label>Profissão</label>
+              <input type="text" id="f-profissao" placeholder="Ex.: Economista">
+              <div class="errmsg">Informe a profissão.</div>
+            </div>
+          </div>
           <div class="field">
             <label>RG</label>
             <input type="text" id="f-rg" placeholder="00.000.000-0" maxlength="12" inputmode="numeric">
             <div class="errmsg">Informe o RG.</div>
           </div>
-          <div class="field">
-            <label>CPF ou CNPJ</label>
-            <input type="text" id="f-cpfcnpj" placeholder="000.000.000-00" maxlength="18" inputmode="numeric">
-            <div class="errmsg">Informe um CPF ou CNPJ válido.</div>
-          </div>
+        </div>
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="f-email" placeholder="seuemail@exemplo.com">
+          <div class="errmsg">Informe um e-mail.</div>
         </div>
         <div class="form-nav">
           <span></span>
@@ -362,6 +367,10 @@
           </div>
 
           <h3 class="terms-heading">Endereço do contratante — corrija se precisar</h3>
+          <div class="field">
+            <label>E-mail</label>
+            <input type="email" id="admin-f-email">
+          </div>
           <div class="field">
             <label>Nacionalidade (opcional)</label>
             <input type="text" id="admin-f-nacionalidade">
